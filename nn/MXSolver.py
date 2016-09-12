@@ -94,9 +94,10 @@ class TimeFilter(logging.Filter):
       return True
 
 class EpochCallback:
-  def __init__(self, solver, metric, progress):
+  def __init__(self, solver, metric, callback, progress):
     self.solver = solver
     self.metric = metric
+    self.callbacks = callback
     self.progress = progress
   def __call__(self, epoch, *args):
     self.progress['epoch'] = epoch
@@ -117,6 +118,9 @@ class EpochCallback:
       epoch,
       training_accuracy[-1]
     )
+
+    for callback in self.callbacks:
+      callback(epoch, *args)
 
     if isinstance(self.solver.scheduler, MannualScheduler):
       with open(self.solver.file, 'r') as source:
@@ -140,6 +144,14 @@ class MXSolver():
     self.devices         = [mx.gpu(index) for index in kwargs['devices']]
     self.epoch           = kwargs['epoch']
     self.file            = kwargs['file']
+
+    if 'callback' not in kwargs:
+      self.callbacks = []
+    else:
+      if isinstance(kwargs['callback'], list):
+        self.callbacks = kwargs['callback']
+      else:
+        self.callbacks = [kwargs['callback']]
 
     self.optimizer_settings = kwargs.pop('optimizer_settings', {})
     if self.optimizer_settings['optimizer'] == 'SGD':
@@ -217,7 +229,7 @@ class MXSolver():
       y                  = self.data[1],
       eval_data          = (self.data[2], self.data[3]),
       eval_metric        = metric,
-      epoch_end_callback = EpochCallback(self, metric, progress),
+      epoch_end_callback = EpochCallback(self, metric, self.callbacks, progress),
       logger             = logger
     )
 

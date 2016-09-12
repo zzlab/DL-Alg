@@ -4,30 +4,167 @@ import numpy as np
 import re
 import logging
 
+from LRScheduler import MannualScheduler
+
+class AccuracyFilter(logging.Filter):
+  def __init__(self, model, validation_data, validation_labels, validation_batch_size, progress):
+    self.model = model
+    self.progress = progress
+    self.memory_allocated = False
+    self.arg_params, self.aux_params = None, None
+    self.validation_iterator = mx.io.NDArrayIter(
+      validation_data,
+      validation_labels,
+      validation_batch_size
+    )
+    self.data_shape = (validation_batch_size,) + validation_data.shape[1:]
+  def filter(self, record):
+    message = record.getMessage()
+    if 'Validation' in message:
+      result = float(message.split('=')[-1])
+      if 'cross-entropy' in message:
+        validation_loss = self.progress['validation_loss']
+        validation_loss.append(result)
+        print 'epoch {:<3} validation loss\t{}'.format(
+          self.progress['epoch'],
+          validation_loss[-1]
+        )
+      elif 'accuracy' in message:
+        validation_accuracy = self.progress['validation_accuracy']
+        validation_accuracy.append(result)
+        print 'epoch {:<3} validation accuracy\t{}'.format(
+          self.progress['epoch'],
+          validation_accuracy[-1]
+        )
+        if validation_accuracy[-1] > max(validation_accuracy[:-1]):
+          if not self.memory_allocated:
+            self.arg_params = {
+              key : mx.nd.zeros(value.shape, mx.cpu()) for key, value in self.model.arg_params.items()
+            }
+            self.aux_params = {
+              key : mx.nd.zeros(value.shape, mx.cpu()) for key, value in self.model.aux_params.items()
+            }
+            self.memory_allocated = True
+          for key, value in self.model.arg_params.items():
+            value.copyto(self.arg_params[key])
+          for key, value in self.model.aux_params.items():
+            value.copyto(self.aux_params[key])
+          print 'epoch {:<3} checkpointed'.format(self.progress['epoch'])
+      else:
+        print 'unrecognized message: %s' % message
+        raise Exception()
+      return False
+    else:
+      return True
+
+class BlockFilter(logging.Filter):
+  def __init__(self):
+    self.targets = (
+      'Auto-select kvstore type',
+      'Start training with',
+      'Resetting Data Iterator'
+    )
+  def filter(self, record):
+    message = record.getMessage()
+    return all(target not in message for target in self.targets)
+
+class LRDecayFilter(logging.Filter):
+  def __init__(self, settings):
+    self.optimizer_settings = settings
+  def filter(self, record):
+    message = record.getMessage()
+    if 'Change learning rate to' in message:
+      lr = float(message.split(' ')[-1])
+      if lr != self.optimizer_settings['lr']:
+        print 'learning rate decayed to %f' % lr
+      return False
+    else:
+      return True
+
+class TimeFilter(logging.Filter):
+  def __init__(self, progress):
+    self.progress = progress
+  def filter(self, record):
+    message = record.getMessage()
+    if 'Time cost' in message:
+      time_consumed = float(message.split('=')[-1])
+      print 'epoch {:<3} {} seconds consumed'.format(self.progress['epoch'], time_consumed)
+      return False
+    else:
+      return True
+
+class EpochCallback:
+  def __init__(self, solver, metric, progress):
+    self.solver = solver
+    self.metric = metric
+    self.progress = progress
+  def __call__(self, epoch, *args):
+    self.progress['epoch'] = epoch
+
+    training_loss = self.progress['training_loss']
+    training_accuracy = self.progress['training_accuracy']
+
+    result = dict(zip(*self.metric.get()))
+
+    training_loss.append(result['cross-entropy'])
+    training_accuracy.append(result['accuracy'])
+
+    print 'epoch {:<3} training loss\t{}'.format(
+      epoch,
+      training_loss[-1]
+    )
+    print 'epoch {:<3} training accuracy\t{}'.format(
+      epoch,
+      training_accuracy[-1]
+    )
+
+    if isinstance(self.solver.scheduler, MannualScheduler):
+      with open(self.solver.file, 'r') as source:
+        settings = source.read()
+        settings = settings.replace('\n', '')
+        settings = settings.split(';')[:-1]
+        settings = [setting.split('=') for setting in settings]
+        if any(len(setting) != 2 for setting in settings):
+          raise Exception('uninterpretable configuration')
+        settings = dict(settings)
+        lr = float(settings['lr'])
+        if self.solver.scheduler.lr != lr:
+          self.solver.scheduler.lr = lr
+          print 'epoch {:<3} learning rate {}'.format(epoch, lr)
+    return
+
 class MXSolver():
   def __init__(self, model, **kwargs):
     self.batch_size      = kwargs['batch_size']
     self.data            = kwargs['data']
     self.devices         = [mx.gpu(index) for index in kwargs['devices']]
     self.epoch           = kwargs['epoch']
-    self.metric          = kwargs.pop('metric', mx.metric.Accuracy())
+    self.file            = kwargs['file']
 
     self.optimizer_settings = kwargs.pop('optimizer_settings', {})
     if self.optimizer_settings['optimizer'] == 'SGD':
       self.optimizer_settings['optimizer'] = 'ccSGD'
     __optimizer_settings = {key : value for key, value in self.optimizer_settings.items()}
     batch_count = math.ceil(self.data[0].shape[0] / self.batch_size)
+
+    if self.optimizer_settings['lr_decay_factor'] == 1:
+      self.scheduler = MannualScheduler(self.optimizer_settings['lr'])
+      self.optimizer_settings.pop('lr_decay_factor')
+      self.optimizer_settings.pop('lr_decay_interval')
+    else:
+      self.scheduler = mx.lr_scheduler.FactorScheduler(
+        step   = self.optimizer_settings.pop('lr_decay_interval') * batch_count,
+        factor = self.optimizer_settings.pop('lr_decay_factor')
+      ),
+
     self.optimizer = getattr(
       mx.optimizer,
       self.optimizer_settings.pop('optimizer')
     )(
       learning_rate = self.optimizer_settings.pop('lr'),
-      lr_scheduler  = mx.lr_scheduler.FactorScheduler(
-        step   = self.optimizer_settings.pop('lr_decay_interval') * batch_count,
-        factor = self.optimizer_settings.pop('lr_decay_factor')
-      ),
-      rescale_grad = (1.0 / self.batch_size),
-      wd           = self.optimizer_settings.pop('weight_decay'),
+      lr_scheduler  = self.scheduler,
+      rescale_grad  = (1.0 / self.batch_size),
+      wd            = self.optimizer_settings.pop('weight_decay'),
       **self.optimizer_settings
     )
     self.optimizer_settings = __optimizer_settings
@@ -46,112 +183,57 @@ class MXSolver():
     print 'model constructed'
 
   def train(self):
-    progress = { \
-      'epoch'    : 0, \
-      'accuracy' : [0] \
+    progress = {
+      'epoch'               : 0,
+      'training_loss'       : [],
+      'training_accuracy'   : [],
+      'validation_loss'     : [],
+      'validation_accuracy' : [0]
     }
-
-    class AccuracyFilter(logging.Filter):
-      def __init__(self, model):
-        self.model = model
-        self.memory_allocated = False
-        self.arg_params, self.aux_params = None, None
-      def filter(self, record):
-        message = record.getMessage()
-        if 'Validation' in message:
-          history = progress['accuracy']
-          history.append(float(re.search('\d\.\d+', message).group()))
-          print 'epoch {:<3} accuracy {}'.format(progress['epoch'], history[-1])
-          if history[-1] > max(history[:-1]):
-            if not self.memory_allocated:
-              self.arg_params = {
-                key : mx.nd.zeros(value.shape, mx.cpu()) for key, value in self.model.arg_params.items()
-              }
-              self.aux_params = {
-                key : mx.nd.zeros(value.shape, mx.cpu()) for key, value in self.model.aux_params.items()
-              }
-              self.memory_allocated = True
-            for key, value in self.model.arg_params.items():
-              value.copyto(self.arg_params[key])
-            for key, value in self.model.aux_params.items():
-              value.copyto(self.aux_params[key])
-            print 'epoch {:<3} checkpointed'.format(progress['epoch'])
-          return False
-        else:
-          return True
-
-    class BlockFilter(logging.Filter):
-      def __init__(self):
-        self.targets = (
-          'Auto-select kvstore type',
-          'Start training with',
-          'Resetting Data Iterator'
-        )
-      def filter(self, record):
-        message = record.getMessage()
-        if 'Epoch' in message:
-          progress['epoch'] = int(re.search('Epoch\[(\d+)\]', message).group(1)) + 1
-        return all(target not in message for target in self.targets)
-
-    class LRDecayFilter(logging.Filter):
-      def __init__(self, settings):
-        self.optimizer_settings = settings
-      def filter(self, record):
-        message = record.getMessage()
-        if 'Change learning rate to' in message:
-          lr = float(message.split(' ')[-1])
-          if lr != self.optimizer_settings['lr']:
-            print 'learning rate decayed to %f' % lr
-          return False
-        else:
-          return True
-
-    class TimeFilter(logging.Filter):
-      def filter(self, record):
-        message = record.getMessage()
-        if 'Time cost' in message:
-          time_consumed = float(message.split('=')[-1])
-          print 'epoch {:<3} {} seconds consumed'.format(progress['epoch'], time_consumed)
-          return False
-        else:
-          return True
 
     logging.basicConfig(level=logging.NOTSET)
     logger = logging.getLogger()
-    accuracy_filter = AccuracyFilter(self.model)
+    accuracy_filter = AccuracyFilter(
+      self.model,
+      self.data[2],
+      self.data[3],
+      self.batch_size,
+      progress
+    )
     logger.addFilter(accuracy_filter)
     logger.addFilter(BlockFilter())
     logger.addFilter(LRDecayFilter(self.optimizer_settings))
-    logger.addFilter(TimeFilter())
+    logger.addFilter(TimeFilter(progress))
 
-    class EpochCallback:
-      def __call__(self, *args):
-        return
+    metric = mx.metric.CompositeEvalMetric(
+      metrics = [
+        mx.metric.Accuracy(),
+        mx.metric.CrossEntropy()
+      ]
+    )
 
     self.model.fit(
       X                  = self.data[0],
       y                  = self.data[1],
       eval_data          = (self.data[2], self.data[3]),
-      eval_metric        = self.metric,
-      epoch_end_callback = EpochCallback(),
+      eval_metric        = metric,
+      epoch_end_callback = EpochCallback(self, metric, progress),
       logger             = logger
     )
 
-    '''
     arg_params, aux_params = accuracy_filter.arg_params, accuracy_filter.aux_params
     for key in self.model.arg_params:
       arg_params[key].copyto(self.model.arg_params[key])
     for key in self.model.aux_params:
       aux_params[key].copyto(self.model.aux_params[key])
-    test_data = mx.io.NDArrayIter(self.data[4], batch_size=self.data[4].shape[0])
-    score = self.model.predict(test_data)
-    prediction = score.argmax(axis=1)
-    test_accuracy = 1 - np.count_nonzero(prediction - self.data[5]) / float(self.data[5].shape[0])
-    print 'optimal validation accuracy %f (epoch %d)' % (
-      max(progress['accuracy']),
-      np.array(progress['accuracy']).argmax()
-    )
-    print 'test accuracy %f' % (test_accuracy)
-    '''
 
-    return progress['accuracy'] # , test_accuracy
+    test_data = mx.io.NDArrayIter(self.data[4], self.data[5], batch_size=self.batch_size)
+    test_accuracy= self.model.score(test_data)
+
+    optimal_accuracy = max(progress['validation_accuracy'])
+    epoch = progress['validation_accuracy'].index(optimal_accuracy)
+
+    print 'optimal validation accuracy %f (epoch %d)' % (optimal_accuracy, epoch)
+    print 'test accuracy %f' % (test_accuracy)
+
+    return test_accuracy, progress

@@ -5,7 +5,7 @@ sys.path.append('../../nn')
 import cPickle as pickle
 
 from utilities.data_utility import load_cifar10
-from GPU_utility import GPU_availability
+from utilities.GPU_utility import GPU_availability
 from MXModels.NIN import NIN
 from MXSolver import *
 from MXInitializer import *
@@ -19,18 +19,19 @@ optimizer_settings = {
   'weight_decay'      : 0
 }
 
-data = load_cifar10(reshape=True, center=True, rescale=True)
+data = load_cifar10(path='../utilities/cifar/', reshape=True, center=True, rescale=True)
 solver_configuration = {
   'batch_size'         : 128,
   'data'               : data,
   'devices'            : GPU_availability()[:4],
-  'epoch'              : 200,
-  'optimizer_settings' : optimizer_settings,
+  'epoch'              : 300,
+  'file'               : '../../nn/lr',
+  'optimizer_settings' : optimizer_settings
 }
 
 model = NIN('DReLU', DReLUInitializer())
 solver = MXSolver(model, **solver_configuration)
-history = solver.train()
+test_accuracy, progress = solver.train()
 '''
 path = ''
 pickle.dump(history, open('../models/%s' % path, 'wb'))

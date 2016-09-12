@@ -3,7 +3,7 @@ import mxnet as mx
 def activate(*args, **kwargs):
   return __activate()(*args, **kwargs)
 
-class __activate:
+class __activate(object):
   count = {}
   def __call__(self, inputs, mode, data_shape=None):
     try:
@@ -142,6 +142,60 @@ def BGNDReLU(inputs, input_shape, label, magnitude=1.6, epsilon=0.001):
 
   return outputs
 
+def NDReLUFC(*args, **kwargs):
+  return __NDReLUFC()(*args, **kwargs)
+
+class __NDReLUFC(object):
+  count = 0
+
+  def __call__(self, inputs, n):
+    outputs = fully_connected(inputs, no_bias=True)
+
+    _, shape, _ = outputs.infer_shape(data=data_shape)
+    shape = shape[0]
+    parameter_shape = (1, shape[1])
+    label = 'NDReLUFC%d' % self.__class__.count
+    gamma = variable('%s_gamma' % label, shape=parameter_shape)
+    beta  = variable('%s_beta' % label, shape=parameter_shape)
+    lower = variable('%s_lower' % label, shape=parameter_shape)
+    upper = variable('%s_upper' % label, shape=parameter_shape)
+
+    outputs = broadcast_minimum(upper, broadcast_maximum(lower, outputs))
+    outputs = broadcast_divide(outputs, upper - lower)
+    outputs = broadcast_multiply(outputs, gamma)
+    outputs = broadcast_plus(outputs, beta)
+
+    self.__class__.count += 1
+
+    return outputs
+ 
+def NDReLUConvolution(*args, **kwargs):
+  return __NDReLUConvolution()(*args, **kwargs)
+
+class __NDReLUConvolution(object):
+  count = 0
+
+  def __call__(self, inputs, kernel, filters, data_shape, stride=(1, 1), pad=(0, 0)):
+    outputs = convolution(inputs, kernel, filters, stride, pad, no_bias=True)
+
+    _, shape, _ = outputs.infer_shape(data=data_shape)
+    shape = shape[0]
+    parameter_shape = (1, shape[1], 1, 1)
+    label = 'NDReLUConvolution%d' % self.__class__.count
+    gamma = variable('%s_gamma' % label, shape=parameter_shape)
+    beta  = variable('%s_beta' % label, shape=parameter_shape)
+    lower = variable('%s_lower' % label, shape=parameter_shape)
+    upper = variable('%s_upper' % label, shape=parameter_shape)
+
+    outputs = broadcast_minimum(upper, broadcast_maximum(lower, outputs))
+    outputs = broadcast_divide(outputs, upper - lower)
+    outputs = broadcast_multiply(outputs, gamma)
+    outputs = broadcast_plus(outputs, beta)
+
+    self.__class__.count += 1
+
+    return outputs
+  
 def block_gradient(inputs):
   return mx.symbol.BlockGrad(data=inputs)
 
@@ -192,8 +246,8 @@ def dropout(inputs, ratio):
 def flatten(inputs):
   return mx.symbol.Flatten(inputs)
 
-def fully_connected(inputs, n, ID=None):
-  return mx.symbol.FullyConnected(data=inputs, num_hidden=n, name=ID)
+def fully_connected(inputs, n, **kwargs):
+  return mx.symbol.FullyConnected(data=inputs, num_hidden=n, **kwargs)
 
 def maximum(left, right):
   return mx.sym.maximum(left, right) 

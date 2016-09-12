@@ -19,3 +19,6 @@ def accuracy(p,l):
 
 def sparsity(l):
   return 1-np.count_nonzero(l).val/float(l.asnumpy().size)
+
+def averaged_top_n(l, n):
+  return sum(sorted(l, reverse=True)[:n]) / float(n)

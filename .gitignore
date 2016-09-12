@@ -1,0 +1,9 @@
+# files
+.ipynb_checkpoints
+*.pyc
+*.swo
+*.swp
+
+# directories
+cifar10/models/
+cifar10/utilities/cifar/

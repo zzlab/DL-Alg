@@ -5,6 +5,6 @@ class DReLUInitializer(mx.initializer.Xavier):
     super(DReLUInitializer, self).__init__(magnitude=2.0)
   def _init_default(self, arg, array):
     if 'lower' in arg:
-      array[:] = -1.0
+      array[:] = 0.0
     elif 'upper' in arg:
       array[:] = 1.0

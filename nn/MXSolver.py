@@ -7,8 +7,8 @@ import logging
 from LRScheduler import MannualScheduler
 
 class AccuracyFilter(logging.Filter):
-  def __init__(self, model, validation_data, validation_labels, validation_batch_size, progress):
-    self.model = model
+  def __init__(self, solver, validation_data, validation_labels, validation_batch_size, progress):
+    self.model = solver.model
     self.progress = progress
     self.memory_allocated = False
     self.arg_params, self.aux_params = None, None
@@ -18,6 +18,7 @@ class AccuracyFilter(logging.Filter):
       validation_batch_size
     )
     self.data_shape = (validation_batch_size,) + validation_data.shape[1:]
+    self.verbose = solver.verbose
   def filter(self, record):
     message = record.getMessage()
     if 'Validation' in message:
@@ -25,10 +26,11 @@ class AccuracyFilter(logging.Filter):
       if 'cross-entropy' in message:
         validation_loss = self.progress['validation_loss']
         validation_loss.append(result)
-        print 'epoch {:<3} validation loss\t{}'.format(
-          self.progress['epoch'],
-          validation_loss[-1]
-        )
+        if self.verbose:
+          print 'epoch {:<3} validation loss\t{}'.format(
+            self.progress['epoch'],
+            validation_loss[-1]
+          )
       elif 'accuracy' in message:
         validation_accuracy = self.progress['validation_accuracy']
         validation_accuracy.append(result)
@@ -94,9 +96,10 @@ class TimeFilter(logging.Filter):
       return True
 
 class EpochCallback:
-  def __init__(self, solver, metric, progress):
+  def __init__(self, solver, metric, callback, progress):
     self.solver = solver
     self.metric = metric
+    self.callbacks = callback
     self.progress = progress
   def __call__(self, epoch, *args):
     self.progress['epoch'] = epoch
@@ -109,14 +112,18 @@ class EpochCallback:
     training_loss.append(result['cross-entropy'])
     training_accuracy.append(result['accuracy'])
 
-    print 'epoch {:<3} training loss\t{}'.format(
-      epoch,
-      training_loss[-1]
-    )
-    print 'epoch {:<3} training accuracy\t{}'.format(
-      epoch,
-      training_accuracy[-1]
-    )
+    if self.solver.verbose:
+      print 'epoch {:<3} training loss\t{}'.format(
+        epoch,
+        training_loss[-1]
+      )
+      print 'epoch {:<3} training accuracy\t{}'.format(
+        epoch,
+        training_accuracy[-1]
+      )
+
+    for callback in self.callbacks:
+      callback(epoch, *args)
 
     if isinstance(self.solver.scheduler, MannualScheduler):
       with open(self.solver.file, 'r') as source:
@@ -127,10 +134,12 @@ class EpochCallback:
         if any(len(setting) != 2 for setting in settings):
           raise Exception('uninterpretable configuration')
         settings = dict(settings)
-        lr = float(settings['lr'])
-        if self.solver.scheduler.lr != lr:
-          self.solver.scheduler.lr = lr
-          print 'epoch {:<3} learning rate {}'.format(epoch, lr)
+        for key, value in settings.items():
+          if key == 'lr':
+            lr = float(settings['lr'])
+            if self.solver.scheduler.lr != lr:
+              self.solver.scheduler.lr = lr
+              print 'epoch {:<3} learning rate {}'.format(epoch, lr)
     return
 
 class MXSolver():
@@ -140,6 +149,15 @@ class MXSolver():
     self.devices         = [mx.gpu(index) for index in kwargs['devices']]
     self.epoch           = kwargs['epoch']
     self.file            = kwargs['file']
+    self.verbose         = kwargs.pop('verbose', False)
+
+    if 'callback' not in kwargs:
+      self.callbacks = []
+    else:
+      if isinstance(kwargs['callback'], list):
+        self.callbacks = kwargs['callback']
+      else:
+        self.callbacks = [kwargs['callback']]
 
     self.optimizer_settings = kwargs.pop('optimizer_settings', {})
     if self.optimizer_settings['optimizer'] == 'SGD':
@@ -172,6 +190,21 @@ class MXSolver():
     batch_shape = (self.batch_size,) + self.data[0].shape[1:]
 
     symbol, initializer = model(batch_shape)
+
+    if self.verbose:
+      args = symbol.list_arguments()
+      arg_shapes, _, _ = symbol.infer_shape(data=self.data[0].shape)
+      print '########################'
+      print 'NETWORK PARAMETERS START'
+      print '########################'
+      for arg, shape in zip(args, arg_shapes):
+        if arg != 'data' and arg != 'softmax_label':
+          print '{:<30}\t{}'.format(arg, shape)
+      print '######################'
+      print 'NETWORK PARAMETERS END'
+      print '######################'
+      print
+
     self.model = mx.model.FeedForward(
       ctx           = self.devices,
       initializer   = initializer,
@@ -194,7 +227,7 @@ class MXSolver():
     logging.basicConfig(level=logging.NOTSET)
     logger = logging.getLogger()
     accuracy_filter = AccuracyFilter(
-      self.model,
+      self,
       self.data[2],
       self.data[3],
       self.batch_size,
@@ -217,7 +250,7 @@ class MXSolver():
       y                  = self.data[1],
       eval_data          = (self.data[2], self.data[3]),
       eval_metric        = metric,
-      epoch_end_callback = EpochCallback(self, metric, progress),
+      epoch_end_callback = EpochCallback(self, metric, self.callbacks, progress),
       logger             = logger
     )
 

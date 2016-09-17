@@ -1,35 +1,28 @@
 import sys
+
+sys.path.append('../')
 sys.path.append('../../nn')
-from GPU_utility import *
 
-from data_utilities import *
+from utilities.GPU_utility import GPU_availability
+from utilities.data_utility import load_cifar10
+from MXModels.ResidualNetwork import ResidualNetwork
+from MXInitializer import DReLUInitializer
+from MXSolver import MXSolver
 
-import MXModels
-from MXInitializer import *
-import MXSolver
-
-import argparse
 import cPickle as pickle
 
-data = load_cifar10(reshape=True, center=True, rescale=True)
+args = dict(enumerate(sys.argv))
+activation = args.pop(1, 'BNReLU')
+n = int(args.pop(2, '3'))
 
-parser = argparse.ArgumentParser()
-
-parser.add_argument('--activation')
-parser.add_argument('--n', type=int)
-
-args = parser.parse_args()
-
-activation = 'BNReLU'
-n = 3
-
-model = MXModels.ResidualNetwork(n, activation, DReLUInitializer())
+data = load_cifar10(path='../utilities/cifar/', reshape=True, center=True, rescale=True)
 
 optimizer_settings = {
-  'lr'                : 0.10,
-  'lr_decay_interval' : 20,
-  'lr_decay_factor'   : 0.9,
-  'optimizer'         : 'SGD',
+  'lr'                : 0.001,
+  'lr_decay_interval' : 1,
+  'lr_decay_factor'   : 1.0,
+# 'momentum'          : 0.3,
+  'optimizer'         : 'Adam',
   'weight_decay'      : 0
 }
 
@@ -37,15 +30,15 @@ solver_configuration = {
   'batch_size'         : 128,
   'data'               : data,
   'devices'            : GPU_availability()[:4],
-  'epoch'              : 100,
+  'epoch'              : 300,
+  'file'               : '../../nn/lr',
   'optimizer_settings' : optimizer_settings,
+  'verbose'            : True
 }
 
 path = 'residual-%d-%s' % (n, activation)
 
-solver = MXSolver.MXSolver(model, **solver_configuration)
-history, test = solver.train()
-'''
-pickle.dump(history, open('models/%s-history' % path, 'wb'))
-pickle.dump((solver.model.arg_params, solver.model.aux_params), open('models/%s-parameters' % path, 'wb'))
-'''
+model = ResidualNetwork(n, activation, DReLUInitializer())
+solver = MXSolver(model, **solver_configuration)
+test_accuracy, progress = solver.train()
+pickle.dump(progress, open('history/%s-history' % path, 'wb'))

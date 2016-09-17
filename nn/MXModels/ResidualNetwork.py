@@ -1,8 +1,9 @@
 from MXLayers import *
 
 class ResidualNetwork():
-  def __init__(self, n, activation, initializer):
+  def __init__(self, n, activation, initializer, double_kernel=True):
     self.n, self.activation, self.initializer = n, activation, initializer
+    self.double_kernel = double_kernel
 
   def __call__(self, data_shape):
     def normalized_convolution(inputs, kernel_shape, kernel_number, stride, pad, activation=None):
@@ -21,7 +22,8 @@ class ResidualNetwork():
 
       else:
         transformed = normalized_convolution(inputs, (3, 3), kernel_number, (1, 1), (1, 1), activation)
-        transformed = normalized_convolution(transformed, (3, 3), kernel_number, (1, 1), (1, 1), activation)
+        if self.double_kernel:
+          transformed = normalized_convolution(transformed, (3, 3), kernel_number, (1, 1), (1, 1), activation)
 
         outputs = inputs + transformed
       

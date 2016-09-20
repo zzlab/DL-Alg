@@ -1,3 +1,4 @@
+import mxnet as mx
 from MXLayers import *
 
 class ResidualNetworkScheduler:
@@ -15,9 +16,14 @@ class ResidualNetwork():
     self.n, self.activation, self.initializer = n, activation, initializer
     self.double_kernel = double_kernel
 
-  def __call__(self, data_shape):
+  def __call__(self, data_shape, intermediate_results=False):
+    if intermediate_results:
+      results = []
+
     def normalized_convolution(inputs, kernel_shape, kernel_number, stride, pad, activation=None):
       outputs = convolution(inputs, kernel_shape, kernel_number, stride, pad)
+      if intermediate_results:
+        results.append(outputs)
       if activation:
         outputs = activate(outputs, activation, data_shape)
       return outputs
@@ -34,11 +40,10 @@ class ResidualNetwork():
         transformed = normalized_convolution(inputs, (3, 3), kernel_number, (1, 1), (1, 1), activation)
         if self.double_kernel:
           transformed = normalized_convolution(transformed, (3, 3), kernel_number, (1, 1), (1, 1), activation)
-
         outputs = inputs + transformed
-      
-      return outputs
 
+      return outputs
+     
     n = self.n
     activation = self.activation
 
@@ -61,4 +66,7 @@ class ResidualNetwork():
     outputs = flatten(outputs)
     outputs = fully_connected(outputs, 10)
 
-    return softmax(outputs), self.initializer
+    if intermediate_results:
+      return mx.symbol.Group(results)
+    else:
+      return softmax(outputs), self.initializer

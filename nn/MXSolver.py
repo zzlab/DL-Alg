@@ -165,15 +165,17 @@ class MXSolver():
     __optimizer_settings = {key : value for key, value in self.optimizer_settings.items()}
     batch_count = math.ceil(self.data[0].shape[0] / self.batch_size)
 
-    if self.optimizer_settings['lr_decay_factor'] == 1:
-      self.scheduler = MannualScheduler(self.optimizer_settings['lr'])
-      self.optimizer_settings.pop('lr_decay_factor')
-      self.optimizer_settings.pop('lr_decay_interval')
+    if 'scheduler' in self.optimizer_settings:
+      if self.optimizer_settings['scheduler'] == 'mannual':
+        self.scheduler = MannualScheduler(self.optimizer_settings['lr'])
+      else:
+        self.scheduler = self.optimizer_settings['scheduler']
+      self.optimizer_settings.pop('scheduler')
     else:
       self.scheduler = mx.lr_scheduler.FactorScheduler(
         step   = self.optimizer_settings.pop('lr_decay_interval') * batch_count,
         factor = self.optimizer_settings.pop('lr_decay_factor')
-      ),
+      )
 
     self.optimizer = getattr(
       mx.optimizer,
@@ -181,7 +183,7 @@ class MXSolver():
     )(
       learning_rate = self.optimizer_settings.pop('lr'),
       lr_scheduler  = self.scheduler,
-      rescale_grad  = (1.0 / self.batch_size),
+      rescale_grad  = 0.1 / float(self.batch_size),
       wd            = self.optimizer_settings.pop('weight_decay'),
       **self.optimizer_settings
     )

@@ -1,5 +1,15 @@
 from MXLayers import *
 
+class ResidualNetworkScheduler:
+  def __init__(self):
+    self.lr = 0.1
+  def __call__(self, iteration):
+    if iteration == 32000:
+      self.lr *= 0.1
+    if iteration == 48000:
+      self.lr *= 0.1
+    return self.lr
+
 class ResidualNetwork():
   def __init__(self, n, activation, initializer, double_kernel=True):
     self.n, self.activation, self.initializer = n, activation, initializer

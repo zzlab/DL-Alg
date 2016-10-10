@@ -1,6 +1,6 @@
 import sys
-sys.path.append('../..')
-sys.path.append('../../../nn')
+sys.path.append('../')
+sys.path.append('../../nn')
 
 import utilities.data_utility as data_utility
 import utilities.GPU_utility as GPU_utility
@@ -41,7 +41,7 @@ class PooledCNN:
 
 activation = sys.argv[1]
 filter_count = int(sys.argv[2])
-model = PooledCNN(activation, filter_count, Initializer.DReLUInitializer())
+model = PooledCNN(activation, filter_count, Initializer.DReLUInitializer(2.0))
 
 optimizer_settings = {
   'lr'                : 0.01,
@@ -51,12 +51,12 @@ optimizer_settings = {
   'weight_decay'      : 0
 }
 
-data = data_utility.load_cifar10(path='../../utilities/cifar/', reshape=True, center=True, rescale=True)
+data = data_utility.load_cifar10(path='../utilities/cifar/', reshape=True, center=True, rescale=True)
 
 solver_configuration = {
   'batch_size'         : 128,
   'data'               : data,
-  'devices'            : GPU_utility.GPU_availability()[:4],
+  'devices'            : GPU_utility.GPU_availability()[:3],
   'epoch'              : 60,
   'optimizer_settings' : optimizer_settings,
 }

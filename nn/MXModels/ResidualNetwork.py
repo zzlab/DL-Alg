@@ -22,10 +22,12 @@ class ResidualNetwork():
 
     def normalized_convolution(inputs, kernel_shape, kernel_number, stride, pad, activation=None):
       outputs = convolution(inputs, kernel_shape, kernel_number, stride, pad)
-      if intermediate_results:
+      if intermediate_results == 'pre-activation':
         results.append(outputs)
       if activation:
         outputs = activate(outputs, activation, data_shape)
+      if intermediate_results == 'post-activation':
+        results.append(outputs)
       return outputs
 
     def residual(inputs, kernel_number, activation=None, project=False):
@@ -53,11 +55,11 @@ class ResidualNetwork():
     for i in range(n):
       outputs = residual(outputs, 16, activation)
 
-    outputs = residual(outputs, 32, project=True)
+    outputs = residual(outputs, 32, activation, project=True)
 
     for i in range(n-1):
       outputs = residual(outputs, 32, activation)
-    outputs = residual(outputs, 64, project=True)
+    outputs = residual(outputs, 64, activation, project=True)
 
     for i in range(n-1):
       outputs = residual(outputs, 64, activation)

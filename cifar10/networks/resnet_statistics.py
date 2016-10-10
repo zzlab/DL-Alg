@@ -29,23 +29,25 @@ args['data'] = mx.nd.array(data[2], device)
 
 outputs = {}
 
-symbol = ResidualNetwork(3, 'BNDReLU', None, True)(data[2].shape, True)
+# symbol = ResidualNetwork(3, 'BNDReLU', None, True)(data[2].shape, True)
+symbol = model(data[0].shape, 'post-activation')
 executor = symbol.bind(device, args=args, aux_states=auxes)
 
 print 'training data'
 executor.forward(is_train=False)
-outputs['training'] = tuple(output.asnumpy() for output in executor.outputs)
+# outputs['training'] = tuple(output.asnumpy() for output in executor.outputs)
 
-executor = executor.reshape(data=self.data[2].shape)
+executor = executor.reshape(data=data[2].shape)
 args['data'] = mx.nd.array(data[2], device)
 
 print 'validation data'
 executor.forward(is_train=False)
-outputs['validation'] = tuple(output.asnumpy() for output in executor.outputs)
+# outputs['validation'] = tuple(output.asnumpy() for output in executor.outputs)
 
 args['data'] = mx.nd.array(data[4], device)
 print 'test data'
 executor.forward(is_train=False)
-outputs['test'] = tuple(output.asnumpy() for output in executor.outputs)
+outputs['test'] = tuple(output.asnumpy().astype(np.float32) for output in executor.outputs)
+print 'finished'
 
-pickle.dump(outputs, open('models/%s-activations' % prefix, 'wb'))
+pickle.dump(outputs, open('models/%s-post-activations' % prefix, 'wb'))

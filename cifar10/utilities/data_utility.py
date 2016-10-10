@@ -1,4 +1,5 @@
 import cPickle as pickle
+import time
 
 def convert_labels(labels,classes=10):
   import numpy as np
@@ -6,6 +7,32 @@ def convert_labels(labels,classes=10):
   converted[np.arange(labels.shape[0]),labels]=1
   return converted
 
+def load_whitened_cifar10(path='whitened-cifar/', reshape=False):
+  import numpy as np
+  training_X, training_Y = [], []
+  for i in range(4):
+    batch = pickle.load(open('%s/training%d' % (path, i), 'rb'))
+    if reshape:
+      batch['data'] = batch['data'].reshape((len(batch['data']), 3, 32, 32))
+    training_X.append(batch['data'])
+    training_Y.append(batch['labels'])
+  training_X = np.vstack(training_X)
+  training_Y = np.hstack(training_Y)
+
+  validation_batch = pickle.load(open('%s/validation' % path, 'rb'))
+  if reshape:
+    validation_batch['data'] = \
+      validation_batch['data'].reshape((len(validation_batch['data']), 3, 32, 32))
+  validation_X, validation_Y = validation_batch['data'], validation_batch['labels']
+
+  test_batch = pickle.load(open('%s/test' % path, 'rb'))
+  if reshape:
+    test_batch['data'] = \
+      test_batch['data'].reshape((len(test_batch['data']), 3, 32, 32))
+  test_X, test_Y = test_batch['data'], test_batch['labels']
+
+  return training_X, training_Y, validation_X, validation_Y, test_X, test_Y
+  
 def load_cifar10(path='./cifar/', reshape=False, convert=False, center=False, rescale=False, validation=4):
   import numpy as np
   training_data, training_labels = [], []
@@ -82,5 +109,4 @@ def load_modified_cifar10(path='./cifar', reshape=False):
 
 if __name__ == '__main__':
   import time
-  data = load_cifar10(center=True, rescale=True)
-  print data[4].mean(axis=0), data[4].std(axis=0)
+  data = load_whitened_cifar10()

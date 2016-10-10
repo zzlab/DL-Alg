@@ -16,12 +16,13 @@ class __activate(object):
 
     if mode == 'ReLUBN':
       return mx.symbol.BatchNorm(
-        mx.symbol.Activation(data=inputs, act_type='relu')
+        mx.symbol.Activation(data=inputs, act_type='relu'),
+        fix_gamma=False
       )
 
     if mode == 'BNReLU':
       return mx.symbol.Activation(
-        data     = mx.symbol.BatchNorm(inputs),
+        data     = mx.symbol.BatchNorm(inputs, fix_gamma=False),
         act_type = 'relu'
       )
 
@@ -43,7 +44,7 @@ class __activate(object):
     if mode == 'BNDReLU':
       label = 'BNDReLU%d' % self.__class__.count[mode]
       _, shape, _ = inputs.infer_shape(data=data_shape)
-      outputs = mx.symbol.BatchNorm(inputs)
+      outputs = mx.symbol.BatchNorm(inputs, fix_gamma=False)
       outputs = DReLU(outputs, shape[0], label)
       return outputs
 
@@ -51,7 +52,7 @@ class __activate(object):
       label = 'DReLUBN%d' % self.__class__.count[mode]
       _, shape, _ = inputs.infer_shape(data=data_shape)
       outputs = DReLU(inputs, shape[0], label)
-      return mx.symbol.BatchNorm(outputs)
+      return mx.symbol.BatchNorm(outputs, fix_gamma=False)
 
     if mode == 'BGNDReLU':
       label = 'BGNDReLU%d' % self.__class__.count[mode]
@@ -200,7 +201,7 @@ def block_gradient(inputs):
   return mx.symbol.BlockGrad(data=inputs)
 
 def batch_normalization(inputs):
-  return mx.symbol.BatchNorm(data=inputs)
+  return mx.symbol.BatchNorm(data=inputs, fix_gamma=False)
 
 def broadcast(inputs, shape):
   return mx.sym.broadcast_to(inputs, shape)

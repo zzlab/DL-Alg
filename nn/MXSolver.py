@@ -148,16 +148,18 @@ class MXSolver():
     self.data            = kwargs['data']
     self.devices         = [mx.gpu(index) for index in kwargs['devices']]
     self.epoch           = kwargs['epoch']
-    self.file            = kwargs['file']
+    self.file            = kwargs.pop('file', 'lr')
     self.verbose         = kwargs.pop('verbose', False)
 
-    if 'callback' not in kwargs:
+    self.batch_end_callback = kwargs.pop('batch_end_callback', [])
+
+    if 'epoch_end_callback' not in kwargs:
       self.callbacks = []
     else:
-      if isinstance(kwargs['callback'], list):
-        self.callbacks = kwargs['callback']
+      if isinstance(kwargs['epoch_end_callback'], list):
+        self.callbacks = kwargs['epoch_end_callback']
       else:
-        self.callbacks = [kwargs['callback']]
+        self.callbacks = [kwargs['epoch_end_callback']]
 
     self.optimizer_settings = kwargs.pop('optimizer_settings', {})
     if self.optimizer_settings['optimizer'] == 'SGD':
@@ -183,7 +185,7 @@ class MXSolver():
     )(
       learning_rate = self.optimizer_settings.pop('lr'),
       lr_scheduler  = self.scheduler,
-      rescale_grad  = 0.1 / float(self.batch_size),
+      rescale_grad  = 1.0 / float(self.batch_size),
       wd            = self.optimizer_settings.pop('weight_decay'),
       **self.optimizer_settings
     )
@@ -252,6 +254,7 @@ class MXSolver():
       y                  = self.data[1],
       eval_data          = (self.data[2], self.data[3]),
       eval_metric        = metric,
+      batch_end_callback = self.batch_end_callback,
       epoch_end_callback = EpochCallback(self, metric, self.callbacks, progress),
       logger             = logger
     )

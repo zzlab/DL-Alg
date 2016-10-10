@@ -30,8 +30,9 @@ solver_configuration = {
   'verbose'            : True
 }
 
-activation = 'DReLU'
-model = NIN(activation, DReLUInitializer())
+activation = 'ReLU'
+initial_parameters = pickle.load(open('NIN_%s_ini' % activation, 'rb'))
+model = NIN(activation, DReLUInitializer(dictionary=initial_parameters))
 solver = MXSolver(model, **solver_configuration)
 history = solver.train() # test_accuracy, progress
 path = 'NIN-%s' % activation

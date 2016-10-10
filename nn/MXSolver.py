@@ -125,6 +125,7 @@ class EpochCallback:
     for callback in self.callbacks:
       callback(epoch, *args)
 
+    # read learning rate from file
     if isinstance(self.solver.scheduler, MannualScheduler):
       with open(self.solver.file, 'r') as source:
         settings = source.read()
@@ -184,7 +185,7 @@ class MXSolver():
       learning_rate = self.optimizer_settings.pop('lr'),
       lr_scheduler  = self.scheduler,
       rescale_grad  = 0.1 / float(self.batch_size),
-      wd            = self.optimizer_settings.pop('weight_decay'),
+      wd            = self.optimizer_settings.pop('weight_decay', 0),
       **self.optimizer_settings
     )
     self.optimizer_settings = __optimizer_settings
@@ -196,16 +197,24 @@ class MXSolver():
     if self.verbose:
       args = symbol.list_arguments()
       arg_shapes, _, _ = symbol.infer_shape(data=self.data[0].shape)
-      print '########################'
-      print 'NETWORK PARAMETERS START'
-      print '########################'
+      print '############################'
+      print '# NETWORK PARAMETERS START #'
+      print '############################'
       for arg, shape in zip(args, arg_shapes):
         if arg != 'data' and arg != 'softmax_label':
           print '{:<30}\t{}'.format(arg, shape)
-      print '######################'
-      print 'NETWORK PARAMETERS END'
-      print '######################'
+      print '##########################'
+      print '# NETWORK PARAMETERS END #'
+      print '##########################'
       print
+      print '#########################'
+      print '# SOLVER SETTINGS START #'
+      print '#########################'
+      print 'scheduler', self.scheduler.__class__
+      print '########################'
+      print '# SOLVER SETTINGS ENDS #'
+      print '########################'
+      print 
 
     self.model = mx.model.FeedForward(
       ctx           = self.devices,

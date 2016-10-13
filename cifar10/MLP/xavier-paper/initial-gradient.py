@@ -20,7 +20,7 @@ storage = {}
 mlp = MLP(
   *((1024,) * HIDDEN_LAYERS + (10,)),
   activation         = activation,
-  affine_monitor     = True,
+  affine_monitor     = False,
   activation_monitor = False,
   storage            = storage
 )
@@ -41,10 +41,16 @@ solver = Solver(
  
 solver.init()
 
-model.forward(test_X, 'train')
-
-for key, value in storage.items():
-  storage[key] = value.asnumpy()
+parameter_keys = list(model.params.keys())
+parameter_values = list(model.params.values())
+def loss_function(*args):
+  predictions = model.forward(test_X, 'train')
+  return model.loss(predictions, test_Y)
+gl = gradient_loss(loss_function, range(len(parameter_keys)))
+gradients, loss = gl(*parameter_values)
+mapped_gradients = dict(zip(parameter_keys, gradients))
+for key, value in mapped_gradients.items():
+  mapped_gradients[key] = value.asnumpy()
 
 import cPickle as pickle
-pickle.dump(storage, open('pre-activation-value-%s-%s' % (activation, ini_mode), 'wb'))
+pickle.dump(mapped_gradients, open('initial-gradient-%s-%s' % (activation, ini_mode), 'wb'))

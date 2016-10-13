@@ -17,7 +17,7 @@ network_in_network = builder.Sequential(
   builder.ReLU(),
   builder.Convolution((1, 1), 96),
   builder.ReLU(),
-  builder.Pooling('max', (3, 3), (2, 2)),
+  builder.Pooling('max', (3, 3), (2, 2), (1, 1)),
   builder.Dropout(0.5),
   builder.Convolution((5, 5), 192, pad=(2, 2)),
   builder.ReLU(),
@@ -25,9 +25,9 @@ network_in_network = builder.Sequential(
   builder.ReLU(),
   builder.Convolution((1, 1), 192),
   builder.ReLU(),
-  builder.Pooling('avg', (3, 3), (2, 2)),
+  builder.Pooling('avg', (3, 3), (2, 2), (1, 1)),
   builder.Dropout(0.5),
-  builder.Convolution((3, 3), 192, pad=(2, 2)),
+  builder.Convolution((3, 3), 192, pad=(1, 1)),
   builder.ReLU(),
   builder.Convolution((1, 1), 192),
   builder.ReLU(),
@@ -38,6 +38,7 @@ network_in_network = builder.Sequential(
 )
 
 data = load_cifar10(path='../utilities/cifar/', reshape=True, center=True, rescale=True)
+# model = builder.Model(network_in_network, 'softmax', (3, 32, 32,))
 model = builder.Model(network_in_network, 'softmax', (3, 32, 32,), data[0])
 solver = Solver(
   model,
@@ -45,5 +46,9 @@ solver = Solver(
   NDArrayIter(data[0], data[1]),
 )
 solver.init()
+solver.train()
+
+'''
 parameters = {key : value.asnumpy() for key, value in model.params.items()}
 pickle.dump(parameters, open('NIN_ReLU_ini', 'wb'))
+'''

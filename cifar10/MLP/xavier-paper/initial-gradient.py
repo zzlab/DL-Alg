@@ -14,8 +14,8 @@ training_X, training_Y, _, _, test_X, test_Y = \
   load_cifar10(path='../../utilities/cifar/', center=True, rescale=True)
 
 HIDDEN_LAYERS = 4
-# activation = sys.argv[1]
-activation = 'ReLU'
+activation = sys.argv[1]
+# activation = 'ReLU'
 storage = {}
 mlp = MLP(
   *((1024,) * HIDDEN_LAYERS + (10,)),
@@ -25,8 +25,8 @@ mlp = MLP(
   storage            = storage
 )
 
-# ini_mode = sys.argv[2]
-ini_mode = 'layer-by-layer'
+ini_mode = sys.argv[2]
+# ini_mode = 'layer-by-layer'
 if ini_mode == 'layer-by-layer':
   model = builder.Model(mlp, 'softmax', (3072,), training_X)
 else:
@@ -43,16 +43,14 @@ solver.init()
 
 parameter_keys = list(model.params.keys())
 parameter_values = list(model.params.values())
-predictions = model.forward(test_X, 'train')
-print predictions
 def loss_function(*args):
+  predictions = model.forward(test_X, 'train')
   return model.loss(predictions, test_Y)
 gl = gradient_loss(loss_function, range(len(parameter_keys)))
 gradients, loss = gl(*parameter_values)
 mapped_gradients = dict(zip(parameter_keys, gradients))
-print mapped_gradients
 for key, value in mapped_gradients.items():
   mapped_gradients[key] = value.asnumpy()
 
 import cPickle as pickle
-# pickle.dump(mapped_gradients, open('initial-gradient-%s-%s' % (activation, ini_mode), 'wb'))
+pickle.dump(mapped_gradients, open('initial-gradient-%s-%s' % (activation, ini_mode), 'wb'))

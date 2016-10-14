@@ -12,14 +12,22 @@ from model_gallery import MultiLayerPerceptron as MLP
 
 import sys
 sys.path.append('../../')
+sys.path.append('../../../nn')
+
+import custom_layers
+
 from utilities.data_utility import load_cifar10
 
 training_X, training_Y, _, _, test_X, test_Y = \
   load_cifar10(path='../../utilities/cifar/', center=True, rescale=True)
 
 HIDDEN_LAYERS = 4
-# activation = sys.argv[1]
-activation = 'ReLU'
+activation = sys.argv[1]
+# activation = 'DReLU'
+try:
+  activation = getattr(custom_layers, activation)
+except:
+  pass
 storage = {}
 mlp = MLP(
   *((1024,) * HIDDEN_LAYERS + (10,)),
@@ -29,8 +37,8 @@ mlp = MLP(
   storage            = storage
 )
 
-# ini_mode = sys.argv[2]
-ini_mode = 'layer-by-layer'
+ini_mode = sys.argv[2]
+# ini_mode = 'layer-by-layer'
 if ini_mode == 'layer-by-layer':
   model = builder.Model(mlp, 'softmax', (3072,), training_X)
 else:
@@ -47,7 +55,7 @@ solver.init()
 
 checkpoint_loss = (2.0, 1.5, 1.0, 0.5)
 
-lr = 0.05
+lr = 0.01
 batch_size = 100
 batch_count = len(training_X) // batch_size
 batch_index = 0
@@ -72,7 +80,7 @@ for loss_value in checkpoint_loss:
     parameter_values = list(model.params.values())
     gradients, loss = gl(test_X, test_Y, *parameter_values)
     print loss
-    loss = round(loss[0], 1)
+    loss = round(loss.asnumpy()[0], 1)
 
     # update networks
     mapped_gradients = dict(zip(parameter_keys, gradients))
@@ -83,5 +91,8 @@ for loss_value in checkpoint_loss:
       # checkpoint
       for key, value in mapped_gradients.items():
         mapped_gradients[key] = value.asnumpy()
-      pickle.dump(mapped_gradients, open('training-gradient-loss-%f' % loss_value, 'wb'))
+      output_file = 'training-gradient-loss-%s-%s-%f' % (
+        activation, ini_mode, loss_value
+      )
+      pickle.dump(mapped_gradients, open(output_file, 'wb'))
       break

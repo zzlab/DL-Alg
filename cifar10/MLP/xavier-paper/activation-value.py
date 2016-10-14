@@ -8,6 +8,8 @@ from model_gallery import MultiLayerPerceptron as MLP
 
 import sys
 sys.path.append('../../')
+sys.path.append('../../../nn')
+from custom_layers
 from utilities.data_utility import load_cifar10
 
 training_X, training_Y, _, _, test_X, test_Y = \

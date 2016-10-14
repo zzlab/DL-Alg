@@ -186,13 +186,8 @@ class MXSolver():
     )(
       learning_rate = self.optimizer_settings.pop('lr'),
       lr_scheduler  = self.scheduler,
-<<<<<<< HEAD
       rescale_grad  = 1.0 / float(self.batch_size),
-      wd            = self.optimizer_settings.pop('weight_decay'),
-=======
-      rescale_grad  = 0.1 / float(self.batch_size),
       wd            = self.optimizer_settings.pop('weight_decay', 0),
->>>>>>> c32ffaa1be30c0ada7ace064c964f1adc7a067f1
       **self.optimizer_settings
     )
     self.optimizer_settings = __optimizer_settings

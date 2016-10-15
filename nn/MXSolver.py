@@ -126,6 +126,9 @@ class EpochCallback:
       callback(epoch, *args)
 
     # read learning rate from file
+    print 'epoch {:<3} current learning rate: {}'.format(
+      epoch, self.solver.scheduler.lr
+    )
     if isinstance(self.solver.scheduler, MannualScheduler):
       with open(self.solver.file, 'r') as source:
         settings = source.read()

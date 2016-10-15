@@ -43,31 +43,31 @@ if activation == 'ReLU':
   )
 else:
   network_in_network = builder.Sequential(
-      builder.Convolution((5, 5), 192, pad=(2, 2)),
-      builder.DReLU(),
-      builder.Convolution((1, 1), 160),
-      builder.DReLU(),
-      builder.Convolution((1, 1), 96),
-      builder.DReLU(),
-      builder.Pooling('max', (3, 3), (2, 2), (1, 1)),
-      builder.Dropout(0.5),
-      builder.Convolution((5, 5), 192, pad=(2, 2)),
-      builder.DReLU(),
-      builder.Convolution((1, 1), 192),
-      builder.DReLU(),
-      builder.Convolution((1, 1), 192),
-      builder.DReLU(),
-      builder.Pooling('avg', (3, 3), (2, 2), (1, 1)),
-      builder.Dropout(0.5),
-      builder.Convolution((3, 3), 192, pad=(1, 1)),
-      builder.DReLU(),
-      builder.Convolution((1, 1), 192),
-      builder.DReLU(),
-      builder.Convolution((1, 1), 10),
-      builder.DReLU(),
-      builder.Pooling('avg', (8, 8)),
-      builder.Reshape((10,))
-    )
+    builder.Convolution((5, 5), 192, pad=(2, 2)),
+    DReLU(),
+    builder.Convolution((1, 1), 160),
+    DReLU(),
+    builder.Convolution((1, 1), 96),
+    DReLU(),
+    builder.Pooling('max', (3, 3), (2, 2), (1, 1)),
+    builder.Dropout(0.5),
+    builder.Convolution((5, 5), 192, pad=(2, 2)),
+    DReLU(),
+    builder.Convolution((1, 1), 192),
+    DReLU(),
+    builder.Convolution((1, 1), 192),
+    DReLU(),
+    builder.Pooling('avg', (3, 3), (2, 2), (1, 1)),
+    builder.Dropout(0.5),
+    builder.Convolution((3, 3), 192, pad=(1, 1)),
+    DReLU(),
+    builder.Convolution((1, 1), 192),
+    DReLU(),
+    builder.Convolution((1, 1), 10),
+    DReLU(),
+    builder.Pooling('avg', (8, 8)),
+    builder.Reshape((10,))
+  )
 
 
 data = load_cifar10(path='../utilities/cifar/', reshape=True, center=True, rescale=True)

@@ -30,7 +30,6 @@ class DecayingAtEpochScheduler:
     if iteration != self._previous_iteration:
       if iteration / self._batches == self._epochs_to_decay[self._epoch_index]:
         self.lr *= self._factor
-        print 'decay at', iteration
         self._epoch_index += 1
       self._previous_iteration = iteration
     return self.lr

@@ -21,7 +21,7 @@ epoch_to_decay = [int(sys.argv[1])]
 batch_size = 128
 batches = len(data[0]) // batch_size
 
-initial_lr = 0.1
+initial_lr = 0.0001
 scheduler = DecayingAtEpochScheduler(initial_lr, 0.1, epoch_to_decay, batches)
 optimizer_settings = {
   'lr'                : initial_lr,
@@ -35,7 +35,7 @@ solver_configuration = {
   'batch_size'         : batch_size,
   'data'               : data,
   'devices'            : GPU_availability()[:4],
-  'epoch'              : 5,
+  'epoch'              : 150,
   'file'               : '../../nn/lr',
   'optimizer_settings' : optimizer_settings,
   'verbose'            : True

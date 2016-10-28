@@ -22,8 +22,8 @@ training_X, training_Y, _, _, test_X, test_Y = \
   load_cifar10(path='../../utilities/cifar/', center=True, rescale=True)
 
 HIDDEN_LAYERS = 4
-activation = sys.argv[1]
-# activation = 'DReLU'
+# activation = sys.argv[1]
+activation = 'DReLU'
 try:
   activation = getattr(custom_layers, activation)
 except:
@@ -37,8 +37,9 @@ mlp = MLP(
   storage            = storage
 )
 
-ini_mode = sys.argv[2]
+# ini_mode = sys.argv[2]
 # ini_mode = 'layer-by-layer'
+ini_mode = 'normal'
 if ini_mode == 'layer-by-layer':
   model = builder.Model(mlp, 'softmax', (3072,), training_X)
 else:
@@ -55,7 +56,7 @@ solver.init()
 
 checkpoint_loss = (2.0, 1.5, 1.0, 0.5)
 
-lr = 0.01
+lr = 0.001
 batch_size = 100
 batch_count = len(training_X) // batch_size
 batch_index = 0
@@ -65,10 +66,12 @@ def loss_function(X, Y, *args):
   return model.loss(predictions, Y)
 gl = gradient_loss(loss_function, range(2, len(model.params) + 2))
 
+parameter_keys = list(model.params.keys())
+parameter_values = list(model.params.values())
+
 for loss_value in checkpoint_loss:
   while True:
     # batch
-    print batch_index
     data_batch = training_X[batch_index * batch_size : (batch_index + 1) * batch_size]
     label_batch = training_Y[batch_index * batch_size : (batch_index + 1) * batch_size]
 
@@ -76,11 +79,10 @@ for loss_value in checkpoint_loss:
     batch_index = (batch_index + 1) % (batch_count - 1)
 
     # compute gradients and loss
-    parameter_keys = list(model.params.keys())
-    parameter_values = list(model.params.values())
     gradients, loss = gl(test_X, test_Y, *parameter_values)
+    loss = loss.asnumpy()[0]
     print loss
-    loss = round(loss.asnumpy()[0], 1)
+    loss = round(loss, 1)
 
     # update networks
     mapped_gradients = dict(zip(parameter_keys, gradients))

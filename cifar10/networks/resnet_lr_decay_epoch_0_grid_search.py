@@ -3,12 +3,14 @@ sys.path.append('../')
 sys.path.append('../../nn')
 
 import cPickle as pickle
+import marshal
 
 from utilities.data_utility import load_cifar10
 from utilities.data_utility import load_whitened_cifar10
 from utilities.GPU_utility import GPU_availability
 from LRScheduler import DecayingAtEpochScheduler
-from MXModels.NIN import NIN
+from MXInitializer import DReLUInitializer
+from MXModels.ResidualNetwork import ResidualNetwork
 from MXSolver import *
 from MXInitializer import *
 
@@ -21,7 +23,7 @@ epoch_to_decay = [int(sys.argv[1])]
 batch_size = 128
 batches = len(data[0]) // batch_size
 
-initial_lr = 0.0001
+initial_lr = 0.01
 scheduler = DecayingAtEpochScheduler(initial_lr, 0.1, epoch_to_decay, batches)
 optimizer_settings = {
   'lr'                : initial_lr,
@@ -35,19 +37,22 @@ solver_configuration = {
   'batch_size'         : batch_size,
   'data'               : data,
   'devices'            : GPU_availability()[:4],
-  'epoch'              : 300,
+  'epoch'              : 200,
   'file'               : '../../nn/lr',
   'optimizer_settings' : optimizer_settings,
   'verbose'            : False
 }
 
-activation = 'DReLU'
-# ini_mode = 'layer-by-layer'
-ini_mode = 'normal'
-ini_file = 'NIN-%s-%s-initial-parameters' % (activation, ini_mode)
+# activation = 'DReLU'
+activation = sys.argv[2]
+ini_file = 'resnet-%s-initial-parameters' % (activation)
 initial_parameters = pickle.load(open(ini_file, 'rb'))
-model = NIN(activation, DReLUInitializer(dictionary=initial_parameters))
+model = ResidualNetwork(
+  3,
+  activation,
+  DReLUInitializer(dictionary=initial_parameters)
+)
 solver = MXSolver(model, **solver_configuration)
 history = solver.train() # test_accuracy, progress
-path = 'NIN_lr_decay_epoch_0_grid_search/%s-decay-at-epoch-%d' % (activation, epoch_to_decay[0])
+path = 'resnet_lr_decay_epoch_0_grid_search/%s-decay-at-epoch-%d' % (activation, epoch_to_decay[0])
 pickle.dump(history, open(path, 'wb'))

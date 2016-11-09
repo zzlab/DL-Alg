@@ -41,7 +41,7 @@ interval = 10
 rescaling_interval = 2000
 
 # settings = {}
-settings = {'learning_rate' : 0.01}
+settings = {'learning_rate' : 0.001}
 initialize(model)
 updater = Updater(model, 'sgd_momentum', settings)
 

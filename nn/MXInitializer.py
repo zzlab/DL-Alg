@@ -1,7 +1,7 @@
 import mxnet as mx
 
 class DReLUInitializer(mx.initializer.Xavier):
-  def __init__(self, magnitude=5.0, dictionary={}):
+  def __init__(self, magnitude=3.0, dictionary={}):
     super(DReLUInitializer, self).__init__('gaussian', 'in', magnitude=magnitude)
     self.dictionary = dictionary
   def __call__(self, name, array):

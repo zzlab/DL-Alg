@@ -34,7 +34,7 @@ solver_configuration = {
   'epoch'              : 100,
   'file'               : '../../nn/lr',
   'optimizer_settings' : optimizer_settings,
-  'verbose'            : True
+  'verbose'            : False
 }
 
 activation = 'ReLU'

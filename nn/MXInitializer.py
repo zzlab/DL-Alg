@@ -5,8 +5,8 @@ class DReLUInitializer(mx.initializer.Xavier):
     super(DReLUInitializer, self).__init__('gaussian', 'in', magnitude=magnitude)
     self.dictionary = dictionary
   def __call__(self, name, array):
+    print name, array.shape, self.dictionary[name].shape
     if name in self.dictionary:
-      print name, 'initialized'
       array[:] = self.dictionary[name]
     else:
       super(DReLUInitializer, self).__call__(name, array)

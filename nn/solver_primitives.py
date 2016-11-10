@@ -5,14 +5,23 @@ def initialize(model):
   import minpy.nn.init as initializers
   from minpy.context import cpu
   for key, value in model.param_configs.items():
-    print key, 'initialized'
     model.params[key] = getattr(
       initializers,
       value['init_rule']
     ) (
       value['shape'],
-      value.pop('init_config', {})
+      value.get('init_config', {})
     )
+    '''
+    model.params[key] =  getattr(
+      initializers,
+      'gaussian'
+    ) (
+      value['shape'],
+      {'stdvar' : 0.01}
+    )
+    '''
+    print key, 'initialized', value['init_rule'], value.get('init_config', {})
 
 def gradient_loss(model, X, Y):
   def _loss_function(X, Y, *args):

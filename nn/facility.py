@@ -10,6 +10,12 @@ def rescale(container, inputs, parameters):
       rescale(module, inputs)
 
     else:
+      ending = None
+      for index in range(len(container._modules) - 1, -1, -1):
+        value = container._modules[index]
+        if isinstance(value, Affine) or isinstance(value, Convolution):
+          ending = index
+          break
       shapes = module.parameter_shape(input_shape)
       input_shape = module.output_shape(input_shape)
       if isinstance(module, Affine) or isinstance(module, Convolution):
@@ -24,7 +30,7 @@ def rescale(container, inputs, parameters):
             std_from = np.std(parameters[key])
             std_to = 1 / (E_X_2 * n) ** 0.5
             rescaling_factor = std_to / std_from
-            if module_index == len(container._modules) - 1:
+            if module_index == ending:
               parameters[key] /= factor
             else:
               factor *= rescaling_factor
@@ -33,7 +39,7 @@ def rescale(container, inputs, parameters):
       if isinstance(container, Sequential):
           inputs = module.forward(inputs, parameters)
 
-  if isinstance(Container, Parallel):
+  if isinstance(container, Parallel):
       inputs = module.forward(inputs, parameters)
 
   return inputs

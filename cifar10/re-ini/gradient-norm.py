@@ -41,7 +41,7 @@ interval = 10
 # settings = {}
 settings = {'learning_rate' : 0.01}
 initialize(model)
-updater = Updater(model, 'sgd_momentum', settings)
+updater = Updater(model, 'sgd', settings)
 
 loss_history = []
 mean = {key : [] for key in model.params}

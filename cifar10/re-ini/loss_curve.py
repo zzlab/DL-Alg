@@ -2,8 +2,8 @@ import minpy.numpy as np
 import minpy.nn.model_builder as builder
 
 from minpy.context import set_context, cpu, gpu
-set_context(gpu(1))
-# set_context(cpu())
+# set_context(gpu(0))
+set_context(cpu())
 
 import cPickle as pickle
 
@@ -44,9 +44,6 @@ rescaling_interval = 1000
 settings = {'learning_rate' : 0.01}
 initialize(model)
 updater = Updater(model, 'sgd', settings)
-
-for key, value in model.params.items():
-  print key, value.context
 
 loss_history = []
 mean = {key : [] for key in model.params}

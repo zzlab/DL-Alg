@@ -13,7 +13,7 @@ import cPickle as pickle
 
 args = dict(enumerate(sys.argv))
 activation = args.pop(1, 'BNReLU')
-n = int(args.pop(2, '3'))
+n = int(args.pop(2, '8'))
 kernel = args.pop(3, 'double')
 path = args.pop(4, None)
 
@@ -29,7 +29,7 @@ optimizer_settings = {
 }
 
 solver_configuration = {
-  'batch_size'         : 128,
+  'batch_size'         : 64,
   'data'               : data,
   'devices'            : GPU_availability()[:4],
   'epoch'              : 50,

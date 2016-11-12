@@ -32,7 +32,7 @@ solver_configuration = {
   'batch_size'         : 200,
   'data'               : data,
   'devices'            : DEVICE,
-  'epoch'              : 0,
+  'epoch'              : 10,
   'file'               : '../../nn/lr',
   'optimizer_settings' : optimizer_settings,
   'verbose'            : True,

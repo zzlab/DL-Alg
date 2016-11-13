@@ -14,6 +14,7 @@ from solver_primitives import *
 sys.path.append('../')
 from utilities.data_utility import load_cifar10
 data = load_cifar10(path='../utilities/cifar/', center=True, rescale=True)
+X = data[0][:16]
 
 hidden_layers = 4
 shapes = (1024,) * hidden_layers + (10,)
@@ -39,10 +40,14 @@ for key, value in model.params.items():
   if 'weight' in key:
     print np.std(value)
 
-rescale(mlp, data[2], model.params) # validation data
+result = model.forward(X, 'train')
+print 'result', np.std(result)
+
+rescale(mlp, X, model.params) # validation data
+
 for key, value in model.params.items():
   if 'weight' in key:
     print np.std(value)
 
-result = model.forward(data[2], 'train')
-print np.std(result)
+result = model.forward(X, 'train')
+print 'result', np.std(result)

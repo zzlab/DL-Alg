@@ -20,8 +20,8 @@ def initialize(model):
       value['shape'],
       {'stdvar' : 0.01}
     )
-    '''
     print key, 'initialized', value['init_rule'], value.get('init_config', {})
+    '''
 
 def gradient_loss(model, X, Y):
   def _loss_function(X, Y, *args):

@@ -9,7 +9,7 @@ class MLP:
     self.shape       = shape
     self.initializer = initializer
 
-  def __call__(self, data_shape, intermediate_result=False):
+  def __call__(self, data_shape):
     inputs = variable('data')
     network = reduce(
       lambda symbol, d : activate(fully_connected(symbol, d), self.activation, data_shape),

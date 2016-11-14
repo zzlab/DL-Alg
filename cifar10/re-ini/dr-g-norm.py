@@ -2,8 +2,8 @@ import minpy.numpy as np
 import minpy.nn.model_builder as builder
 
 from minpy.context import set_context, cpu, gpu
-set_context(gpu(1))
-# set_context(cpu())
+# set_context(gpu(0))
+set_context(cpu())
 
 import cPickle as pickle
 
@@ -36,12 +36,12 @@ batches = len(data[0]) // batch_size
 batch_index = 0
 # raise Exception()
 
-iterations = 20000
+iterations = 10
 interval = 10
-rescaling_interval = 1000
+rescaling_interval = 1
 
 # settings = {}
-settings = {'learning_rate' : 0.01}
+settings = {'learning_rate' : 0.05}
 initialize(model)
 updater = Updater(model, 'sgd', settings)
 
@@ -55,6 +55,7 @@ L_2 = {key : [] for key in model.params}
 minimum = {key : [] for key in model.params}
 maximum = {key : [] for key in model.params}
 
+factor_history = []
 for i in range(iterations):
   X_batch = data[0][batch_index * batch_size : (batch_index + 1) * batch_size]
   Y_batch = data[1][batch_index * batch_size : (batch_index + 1) * batch_size]
@@ -74,13 +75,19 @@ for i in range(iterations):
   updater.update(gradients)
 
   if (i + 1) % rescaling_interval == 0:
-    rescale(mlp, data[2], model.params) # validation data
+    outputs, factors = rescale(mlp, X_batch, model.params)
+    for index, value in enumerate(factors):
+      factors[index] = float(value)
+    factor_history.append(factors)
     print 'rescaled'
 
   if (i + 1) % interval == 0:
     print 'iteration %d loss %f' % (i + 1, loss)
 
+'''
 pickle.dump(
   (loss_history, mean, std, L_2, minimum, maximum),
   open('dr-g-norm-%d' % rescaling_interval, 'wb')
 )
+'''
+pickle.dump(factor_history, open('dr-factor-history', 'wb'))

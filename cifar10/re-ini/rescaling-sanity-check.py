@@ -30,10 +30,12 @@ mlp.append(builder.Affine(shapes[-1]))
 
 model = builder.Model(mlp, 'softmax', (3072,))
 
+'''
 for key, value in model.param_configs.items():
   if 'weight' in key:
     value['init_rule'] = 'gaussian'
     value['init_config'] = {'stdvar' : 1}
+'''
 
 initialize(model)
 for key, value in model.params.items():
@@ -43,11 +45,10 @@ for key, value in model.params.items():
 result = model.forward(X, 'train')
 print 'result', np.std(result)
 
-rescale(mlp, X, model.params) # validation data
+result, factors = rescale(mlp, X, model.params)
+print 'result', np.std(result)
 
 for key, value in model.params.items():
   if 'weight' in key:
     print np.std(value)
 
-result = model.forward(X, 'train')
-print 'result', np.std(result)

@@ -2,7 +2,7 @@ import minpy.numpy as np
 import minpy.nn.model_builder as builder
 
 from minpy.context import set_context, cpu, gpu
-# set_context(cpu())
+set_context(gpu(0))
 
 import cPickle as pickle
 
@@ -16,34 +16,27 @@ sys.path.append('../')
 from utilities.data_utility import load_cifar10
 data = load_cifar10(path='../utilities/cifar/', center=True, rescale=True)
 
-'''
-print sys.argv
-raise Exception()
-'''
-ACTIVATION = sys.argv[1]
-activation = getattr(builder, ACTIVATION)
-DR_INTERVAL = int(sys.argv[2])
-DEVICE = int(sys.argv[3])
-set_context(gpu(DEVICE))
-shapes = [int(shape) for shape in sys.argv[4:]]
-
+hidden_layers = 4
+shapes = (1024,) * hidden_layers + (10,)
+activation = builder.ReLU
 storage = {}
 mlp = builder.Sequential()
 for i, shape in enumerate(shapes[:-1]):
   mlp.append(builder.Affine(shape))
+  mlp.append(builder.Export('affine%d' % i, storage))
   mlp.append(activation())
 mlp.append(builder.Affine(shapes[-1]))
+mlp.append(builder.Export('affine%d' % (len(shapes) - 1), storage))
 model = builder.Model(mlp, 'softmax', (3072,))
 
 batch_size = 100
 batches = len(data[0]) // batch_size
 batch_index = 0
 
-iterations = 25000
+iterations = 10000
 interval = 10
 
-# settings = {}
-settings = {'learning_rate' : 0.005}
+settings = {'learning_rate' : 0.05}
 initialize(model)
 updater = Updater(model, 'sgd', settings)
 
@@ -51,6 +44,10 @@ for key, value in model.params.items():
   print key, value.context
 
 loss_history = []
+mean = {key : [] for key in model.params}
+std = {key : [] for key in model.params}
+minimum = {key : [] for key in model.params}
+maximum = {key : [] for key in model.params}
 
 for i in range(iterations):
   X_batch = data[0][batch_index * batch_size : (batch_index + 1) * batch_size]
@@ -61,18 +58,15 @@ for i in range(iterations):
   loss = loss.asnumpy()[0]
   loss_history.append(loss)
 
-  updater.update(gradients)
+  for key, value in zip(model.params.keys(), gradients):
+    mean[key].append(np.mean(value).asnumpy())
+    std[key].append(np.std(value).asnumpy())
+    minimum[key].append(np.min(value).asnumpy())
+    maximum[key].append(np.max(value).asnumpy())
 
-  if (i + 1) % DR_INTERVAL == 0:
-    rescale(mlp, X_batch, model.params)
-    '''
-    outputs = model.forward(X_batch, 'train')
-    rescaled_loss = model.loss(outputs, Y_batch)
-    print 'loss', loss, 'rescaled', rescaled_loss
-    '''
+  updater.update(gradients)
 
   if (i + 1) % interval == 0:
     print 'iteration %d loss %f' % (i + 1, loss)
 
-configuration = 'interval-%s-shape-%s' % (DR_INTERVAL, '-'.join(sys.argv[4:]))
-pickle.dump(loss_history, open('mlp-dr-loss-%s' % configuration, 'wb'))
+pickle.dump((loss_history, mean, std, minimum, maximum), open('forward-statistics', 'wb'))

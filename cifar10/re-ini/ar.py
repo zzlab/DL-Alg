@@ -23,17 +23,18 @@ raise Exception()
 ACTIVATION = 'ReLU'
 activation = getattr(builder, ACTIVATION)
 # DR_INTERVAL = int(sys.argv[2])
-DR_INTERVAL = 30
-# DEVICE = int(sys.argv[3])
-DEVICE = 0
+DR_INTERVAL = int(sys.argv[1])
+DEVICE = int(sys.argv[2])
+# DEVICE = 0
 set_context(gpu(DEVICE))
 # shapes = [int(shape) for shape in sys.argv[4:]]
-shapes = (1024,) * 10 + (10,)
+shapes = (1024,) * 4 + (10,)
 
 storage = {}
 mlp = builder.Sequential()
 for i, shape in enumerate(shapes[:-1]):
   mlp.append(builder.Affine(shape))
+  mlp.append(builder.Export('affine%d' % i, storage))
   mlp.append(activation())
 mlp.append(builder.Affine(shapes[-1]))
 model = builder.Model(mlp, 'softmax', (3072,))
@@ -46,7 +47,7 @@ iterations = 25000
 interval = 10
 
 # settings = {}
-settings = {'learning_rate' : 0.005}
+settings = {'learning_rate' : 0.05}
 initialize(model)
 updater = Updater(model, 'sgd', settings)
 
@@ -69,20 +70,31 @@ for i in range(iterations):
   print minimum
   '''
 
+  '''
   print 'parameters'
   for key, value in model.params.items():
     if 'weight' in key:
       print key, np.mean(value ** 2)
+  '''
 
   updater.update(gradients)
 
   if (i + 1) % DR_INTERVAL == 0:
+    '''
+    print 'pre'
+    for key, value in storage.items():
+      print key, array_std(value, axis=0)
+    '''
     affine_rescale(mlp, X_batch, model.params)
+    model.forward(X_batch, 'train')
+    '''
+    print 'post'
+    for key, value in storage.items():
+      print key, array_std(value, axis=0)
+    '''
 
   if (i + 1) % interval == 0:
     print 'iteration %d loss %f' % (i + 1, loss)
 
-'''
-configuration = 'interval-%s-shape-%s' % (DR_INTERVAL, '-'.join(sys.argv[4:]))
-pickle.dump(loss_history, open('mlp-dr-loss-%s' % configuration, 'wb'))
-'''
+configuration = 'interval-%s-shape-%s' % (DR_INTERVAL, '-'.join(str(d) for d in shapes))
+pickle.dump(loss_history, open('model/mlp-ar-loss-%s' % configuration, 'wb'))

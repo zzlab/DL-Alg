@@ -13,12 +13,22 @@ def softmax_probability(p, channel):
   total_p = np.sum(p, axis=1).reshape((N, 1))
   return np.sum(selected_p / total_p, axis=1)
 
+def KL(P, Q):
+  return np.sum(P * np.log(P / Q), axis=1)
+
 def flatten(array):
   return array.asnumpy().flatten()
 
 def to_float(array):
   if array.shape == (1,):
     return array.asnumpy()[0]
+
+def np_wrapper(f):
+  def wrapped(*args, **kwargs):
+    args = [arg.asnumpy() if isinstance(arg, Array) else arg for arg in args]
+    kwargs = { key : value.asnumpy() if isinstance(value, Array) else value for key, value in kwargs.items() }
+    return f(*args, **kwargs)
+  return wrapped
 
 def clip(X, lower, upper):
   return np.minimum(upper, np.maximum(lower, X))

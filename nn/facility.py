@@ -3,9 +3,25 @@ from minpy.array import Array
 import minpy.numpy as np
 from minpy.numpy import prod as product
 
+def softmax_probability(p, channel):
+  N, C = p.shape
+  p -= np.max(p, axis=1).reshape((N, 1))
+  code = np.zeros((N, C))
+  np.onehot_encode(channel, code)
+  p = np.exp(p)
+  selected_p = p * code
+  total_p = np.sum(p, axis=1).reshape((N, 1))
+  return np.sum(selected_p / total_p, axis=1)
+
+def flatten(array):
+  return array.asnumpy().flatten()
+
 def to_float(array):
   if array.shape == (1,):
     return array.asnumpy()[0]
+
+def clip(X, lower, upper):
+  return np.minimum(upper, np.maximum(lower, X))
 
 def to_np(array):
   return array.asnumpy()

@@ -57,3 +57,14 @@ def classification_accuracy(model, X, Y):
   predicted_Y = np.argmax(predictions, axis=1)
   errors = np.count_nonzero(predicted_Y - Y)
   return 1 - errors / float(N)
+
+def Batches(data, batch_size):
+  n_batches = data.shape[0] // batch_size
+  index = 0
+  while True:
+    if index + 1 == n_batches:
+      yield data[index * batch_size:]
+      index = 0
+    else:
+      yield data[index * batch_size : (index + 1) * batch_size]
+      index += 1

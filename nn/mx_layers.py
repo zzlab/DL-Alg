@@ -262,7 +262,10 @@ def pooling(inputs, mode, kernel, stride=(1, 1), pad=(0, 0)):
 def reshape(inputs, shape, **kwargs):
   return mx.symbol.Reshape(data=inputs, target_shape=shape, **kwargs)
 
-def softmax(inputs, labels=None):
+def softmax_activation(X):
+  return mx.symbol.SoftmaxActivation(data=X, mode='instance')
+
+def softmax_loss(inputs, labels=None):
   return mx.symbol.SoftmaxOutput(data=inputs, label=labels) if labels \
     else mx.symbol.SoftmaxOutput(data=inputs, name='softmax')
 

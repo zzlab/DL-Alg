@@ -33,13 +33,18 @@ def gradient_loss(model, X, Y):
   return gl(X, Y, *parameters)
 
 class Updater:
-  def __init__(self, model, optimizer, settings):
+  def __init__(self, model, optimizer, settings, policy=None):
     import minpy.nn.optim as optimizers
     self._optimizer = getattr(optimizers, optimizer)
     self._parameters = model.params
     self._parameter_keys = list(self._parameters.keys())
     self._parameter_values = list(self._parameters.values())
     self._cache = {key : dict(settings) for key in self._parameter_keys}
+    self._policy = policy
+
+  def __setitem__(self, key, value):
+    for cache in self._cache.values():
+      cache[key] = value
 
   def update(self, gradients):
     mapped_gradients = dict(zip(self._parameter_keys, gradients))

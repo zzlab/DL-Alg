@@ -1,7 +1,20 @@
+import numpy as np0
 from minpy.nn.model_builder import *
 from minpy.array import Array
 import minpy.numpy as np
 from minpy.numpy import prod as product
+
+def np_wrapper(f):
+  def wrapped(*args, **kwargs):
+    args = [arg.asnumpy() if isinstance(arg, Array) else arg for arg in args]
+    kwargs = { key : value.asnumpy() if isinstance(value, Array) else value for key, value in kwargs.items() }
+    return f(*args, **kwargs)
+  return wrapped
+
+@np_wrapper
+def accuracy(p, labels):
+  N, D = p.shape
+  return np0.sum(np0.argmax(p, axis=1) == labels) / float(N)
 
 def softmax_probability(p, channel):
   N, C = p.shape
@@ -22,13 +35,6 @@ def flatten(array):
 def to_float(array):
   if array.shape == (1,):
     return array.asnumpy()[0]
-
-def np_wrapper(f):
-  def wrapped(*args, **kwargs):
-    args = [arg.asnumpy() if isinstance(arg, Array) else arg for arg in args]
-    kwargs = { key : value.asnumpy() if isinstance(value, Array) else value for key, value in kwargs.items() }
-    return f(*args, **kwargs)
-  return wrapped
 
 def clip(X, lower, upper):
   return np.minimum(upper, np.maximum(lower, X))

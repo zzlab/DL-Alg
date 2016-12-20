@@ -1,7 +1,10 @@
-def noisy_gradient_loss(model, X, Y, gamma, K, N_CLASSES=4):
+from minpy.core import grad_and_loss as _gradient_loss
+import minpy.numpy as np
+from facility import KL
+
+def unbiased_noisy_gradient_loss(model, X, Y, sample, gamma, K, N_CLASSES=4):
   N, D = X.shape
   noisy_X = sample(K, D)
-  p_noisy_X = pdf(noisy_X)
   def _loss_function(*args):
     normal_loss = model.loss(model.forward(X, 'train'), Y)
     noisy_output = model.forward(noisy_X, 'train')
@@ -10,7 +13,7 @@ def noisy_gradient_loss(model, X, Y, gamma, K, N_CLASSES=4):
     model_p_noisy_X = noisy_output / np.sum(noisy_output, axis=1).reshape((K, 1))
     kl = KL(1.0 / N_CLASSES, model_p_noisy_X)
     noisy_loss = gamma * np.sum(kl) / float(K)
-    return normal_loss + noisy_loss
+    return gamma * normal_loss + (1 - gamma) * noisy_loss
   gl = _gradient_loss(_loss_function, range(len(model.params)))
   parameters = list(model.params.values())
   return gl(*parameters)
@@ -20,26 +23,34 @@ from mx_layers import *
 from mx_models.mlp import MLP
 
 class NoisyMLP:
+  # TODO weight sharing
   def __call__(self, X_shape, generator, gconfigurations):
     normal_X = variable('data')
-    normal_loss = softmax_loss(self._generate_network(normal_X, X_shape))
     gconfigurations['shape'] = X_shape
     noisy_X = getattr(symbols, generator)(**gconfigurations)
-    noisy_p = softmax_activation(self._generate_network(noisy_X, X_shape))
+
+    for index, shape in enumerate(self._shape[:-1]):
+      weight = variable('fullyconnected%d_weight' % index)
+      bias = variable('fullyconnected%d_bias' % index)
+      normal_X = fully_connected(normal_X, shape, weight=weight, bias=bias)
+      normal_X = activate(normal_X, self._activation, data_shape),
+      noisy_X = fully_connected(noisy_X, shape, weight=weight, bias=bias)
+      noisy_X = activate(noisy_X, self._activation, data_shape),
+    
+    weight = variable('fullyconnected%d_weight' % (len(self._shape) - 1))
+    bias = variable('fullyconnected%d_bias' % (len(self._shape) - 1))
+    normal_X = fully_connected(normal_X, self._shape[-1], weight=weight, bias=bias)
+    noisy_X = fully_connected(noisy_X, self._shape[-1], weight=weight, bias=bias)
+    
+    normal_loss = softmax_loss(normal_X)
+    noisy_p = softmax_activation(noisy_X)
     noisy_loss = NoisyMLP._kl(noisy_p, self._shape[-1])
+
     return normal_loss + noisy_loss
 
   def __init__(self, shape, activation):
     self._shape      = shape
     self._activation = activation
-
-  def _generate_network(self, X, data_shape):
-    network = reduce(
-      lambda symbol, d : activate(fully_connected(symbol, d), self._activation, data_shape),
-      self._shape[:-1],
-      X
-    )
-    return fully_connected(network, self._shape[-1])
 
   @staticmethod
   def _kl(P, n_classes):

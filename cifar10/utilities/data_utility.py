@@ -55,7 +55,11 @@ def load_cifar10(path='./cifar/', reshape=False, convert=False, center=False, re
 
   training_labels = convert_labels(np.hstack(training_labels)) if convert else np.hstack(training_labels)
 
-  validation_batch = pickle.load(open(path + 'data_batch_%d' % (validation + 1), 'rb'))
+  if validation is None:
+    validation_batch = pickle.load(open(path + 'test_batch', 'rb'))
+  else:
+    validation_batch = pickle.load(open(path + 'data_batch_%d' % (validation + 1), 'rb'))
+
   validation_data = np.array(validation_batch['data'])
 
   if center:

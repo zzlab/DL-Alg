@@ -1,8 +1,74 @@
 import numpy as np0
+import mxnet.symbol as symbol
+from minpy.core import Function
 from minpy.nn.model_builder import *
 from minpy.array import Array
 import minpy.numpy as np
 from minpy.numpy import prod as product
+
+def load_mnist(path='/home/alex/experiment/mnist/utilities', shape=None):
+  import cPickle,gzip
+  import minpy.numpy as np
+  with gzip.open(path+'/mnist.gz', 'rb') as data:
+    package = cPickle.load(data)
+  if shape is not None:
+    package = list(package) 
+    for index, data in enumerate(package):
+      X, Y = data
+      N, D = X.shape
+      package[index] = (X.reshape((N,) + shape), Y)
+    package = tuple(package)
+  unpacked = []
+  for data in package:
+    unpacked.extend(data)
+  unpacked = tuple(unpacked)
+  return unpacked
+
+def batch_dot(left, right):
+  # assert left.shape[0] == right.shape[0] and left.shape[2] == right.shape[1]
+  left_symbol = symbol.Variable('left')
+  right_symbol = symbol.Variable('right')
+  result_symbol = symbol.batch_dot(left_symbol, right_symbol)
+  shapes = {'left' : left.shape, 'right' : right.shape}
+  kwargs = {'left' : left, 'right' : right}
+  return Function(result_symbol, shapes)(**kwargs)
+
+def batch_scalar_product(left, right):
+  left_shape, right_shape = map(int, left.shape), map(int, right.shape)
+  # assert left_shape == right_shape
+  N, D = left_shape
+  left = left.reshape((N, 1, D))
+  right = right.reshape((N, D ,1))
+  result = batch_dot(left, right)
+  result = result.reshape((N, 1))
+  return result
+
+def mark():
+  from inspect import currentframe, getframeinfo
+  frame = currentframe().f_back
+  string = 'at %s %s' % (getframeinfo(frame).filename, frame.f_lineno)
+# print '*' * len(string)
+  print string
+# print '*' * len(string)
+
+def identity(n):
+  array = np.zeros((n, n))
+  array[np.arange(n), np.arange(n)] = 1
+  return array
+
+def diagonal(array):
+  rows, columns = array.shape
+  assert rows == columns
+  mask = identity(rows)
+  result = array * mask
+  return result
+
+def outer(left, right):
+  # left and right must be vectors
+  left = left.reshape((1, max(left.shape)))
+  right = right.reshape((max(right.shape), 1))
+  product = left * right
+  return product
 
 def np_wrapper(f):
   def wrapped(*args, **kwargs):
@@ -10,6 +76,9 @@ def np_wrapper(f):
     kwargs = { key : value.asnumpy() if isinstance(value, Array) else value for key, value in kwargs.items() }
     return f(*args, **kwargs)
   return wrapped
+
+def average_top_k(table, k):
+  return sum(sorted(table)[len(table) - k:]) / float(k)
 
 @np_wrapper
 def accuracy(p, labels):
@@ -143,3 +212,8 @@ def affine_rescale(container, inputs, parameters, epsilon=1E-3):
 #     inputs = module.forward(inputs, parameters)
 
   return inputs
+
+if __name__ == '__main__':
+  left = np0.random.normal(0, 1, (100, 1, 10))
+  right = np0.random.normal(0, 1, (100, 10, 10))
+  print batch_dot(left, right).shape

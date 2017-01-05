@@ -4,14 +4,25 @@ def convert_labels(labels,classes=10):
   converted[np.arange(labels.shape[0]),labels]=1
   return converted
 
-def load_mnist(path='.'):
+def load_mnist(path='.', shape=None):
   import cPickle,gzip
   import minpy.numpy as np
   with gzip.open(path+'/mnist.gz', 'rb') as data:
-    training,validation,test=cPickle.load(data)
-    return training[0], training[1], validation[0], validation[1], test[0], test[1]
+    package = cPickle.load(data)
+  if shape is not None:
+    package = list(package) 
+    for index, data in enumerate(package):
+      X, Y = data
+      N, D = X.shape
+      package[index] = (X.reshape((N,) + shape), Y)
+    package = tuple(package)
+  unpacked = []
+  for data in package:
+    unpacked.extend(data)
+  unpacked = tuple(unpacked)
+  return unpacked
 
 if __name__ == '__main__':
-  data = load_mnist(origin=True)
+  data = load_mnist(shape=(7, 4 * 28))
   for d in data:
-    print d.shape
+    print d.min(), d.max()

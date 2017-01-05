@@ -1,5 +1,8 @@
 import mxnet as mx
 
+def ReLU(X):
+  return mx.sym.Activation(data=X, act_type='relu')
+
 def activate(*args, **kwargs):
   return __activate()(*args, **kwargs)
 
@@ -257,7 +260,8 @@ def minimum(left, right):
   return mx.sym.minimum(left, right)
  
 def pooling(inputs, mode, kernel, stride=(1, 1), pad=(0, 0)):
-  return mx.symbol.Pooling(inputs, pool_type=mode, kernel=kernel, stride=stride, pad=pad)
+  mapping = {'average' : 'avg', 'maximum' : 'max'}
+  return mx.symbol.Pooling(inputs, pool_type=mapping[mode], kernel=kernel, stride=stride, pad=pad)
 
 def reshape(inputs, shape, **kwargs):
   return mx.symbol.Reshape(data=inputs, target_shape=shape, **kwargs)

@@ -1,3 +1,5 @@
+import logging
+
 class MannualScheduler:
   def __init__(self, lr):
     self.lr = lr
@@ -5,15 +7,17 @@ class MannualScheduler:
     return self.lr
 
 class FactorScheduler:
-  def __init__(self, lr, factor, interval):
+  def __init__(self, lr, factor, interval, minimum_lr=0):
     self.lr = lr
+    self._minimum_lr = minimum_lr
     self._factor = factor
     self._interval = interval
     self._previous_iteration = None
   def __call__(self, iteration):
     if iteration != self._previous_iteration:
-      if iteration != 0 and iteration % self._interval == 0:
+      if iteration != 0 and iteration % self._interval == 0 and self.lr * self._factor > self._minimum_lr:
         self.lr *= self._factor
+        logging.info('iteration %d learning rate set to %f' % (iteration, self.lr))
       self._previous_iteration = iteration
     return self.lr
 

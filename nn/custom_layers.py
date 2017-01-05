@@ -1,5 +1,8 @@
 import minpy.numpy as np
 import minpy.nn.model_builder as builder
+import numpy as np0
+
+from facility import *
 
 class DReLU(builder.Module):
   _count = 0
@@ -243,9 +246,17 @@ class ChannelDivision(builder.Module):
     else:
       return {}
 
+def layer_normalization(X, gamma, beta, epsilon=0.001):
+  N, D = X.shape
+  mean = np.sum(X, axis=1).reshape((N, 1)) / float(D)
+  X = X - mean
+  variance = np.sum(X ** 2, axis=1).reshape((N, 1)) /float(D)
+  std = variance ** 0.5
+  X = X / (std + epsilon)
+  return X * gamma + beta
+
 if __name__ == '__main__':
-  print 'here'
-  X = np.random.normal(0, 1, (256, 16))
-  chd = ChannelDivision(np.full(16, 2))
-  result = chd.forward(X, 'train')
-  print np.std(result)
+  X = np.random.normal(3, 3, (16, 2048))
+  Y = layer_normalization(X, 1, 0)
+  print np0.mean(to_np(Y), axis=1)
+  print np0.std(to_np(Y), axis=1)

@@ -1,3 +1,5 @@
+# TODO epoch formatting as solver's method
+
 import mxnet as mx
 import math
 import numpy as np
@@ -77,18 +79,19 @@ class EpochFilter(logging.Filter):
       self._solver._progress['epoch'] = int(message[start : end])
     return True
 
+'''
 class LearningRateFilter(logging.Filter):
   def __init__(self, solver):
     self._solver = solver
   def filter(self, record):
-    # TODO epoch formatting as solver's method
+    # TODO log iteration
     message = record.getMessage()
     if 'learning rate' in message:
-      epoch = self._solver._progress['epoch']
       lr = float(message.split(' ')[-1])
-      if self._solver._verbose: print 'epoch %d learning rate set to %f' % (epoch, lr)
+      if self._solver._verbose: print 'learning rate set to %f' % lr
       return False
     else: return True
+'''
 
 class TimeFilter(logging.Filter):
   def __init__(self, solver):
@@ -104,6 +107,7 @@ class TimeFilter(logging.Filter):
 
 class MXSolver():
 # TODO monitor
+# TODO logging: epoch/iteration
   def __init__(self,
     batch_functions    = [],
     batch_size         = None,
@@ -141,6 +145,7 @@ class MXSolver():
       lr_scheduler  = self._lr_scheduler,
       rescale_grad  = 1.0 / self._batch_size,
       wd            = optimizer_settings.get('weight_decay', 0),
+      **optimizer_settings.get('args', {})
     )
 
     logging.basicConfig(level=logging.NOTSET)
@@ -206,26 +211,38 @@ class MXSolver():
     from mxnet.metric import Accuracy, CompositeEvalMetric, CrossEntropy
     self._metrics = CompositeEvalMetric(metrics=[Accuracy(), CrossEntropy()])
 
-    training_X, training_Y, validation_X, validation_Y, test_X, test_Y = data
-
     logger = logging.getLogger()
     accuracy_filter = AccuracyFilter(self)
     logger.addFilter(accuracy_filter)
-    logger.addFilter(LearningRateFilter(self))
+#   logger.addFilter(LearningRateFilter(self))
     logger.addFilter(TimeFilter(self))
 
-    self._model.fit(
-      X                  = training_X,
-      y                  = training_Y,
-      eval_data          = (validation_X, validation_Y),
-      eval_metric        = self._metrics,
-      batch_end_callback = self._batch_functions,
-      epoch_end_callback = self._epoch_functions,
-      logger             = logger
-    )
+    # TODO
+    from numpy import ndarray
+    if all(isinstance(d, ndarray) for d in data):
+      training_X, training_Y, validation_X, validation_Y, test_X, test_Y = data
+      test_data = mx.io.NDArrayIter(test_X, test_Y, batch_size=self._batch_size)
+      self._model.fit(
+        X                  = training_X,
+        y                  = training_Y,
+        eval_data          = (validation_X, validation_Y),
+        eval_metric        = self._metrics,
+        batch_end_callback = self._batch_functions,
+        epoch_end_callback = self._epoch_functions,
+        logger             = logger
+      )
+    else:
+      training_data, validation_data, test_data = data
+      self._model.fit(
+        X                  = training_data,
+        eval_data          = validation_data,
+        eval_metric        = self._metrics,
+        batch_end_callback = self._batch_functions,
+        epoch_end_callback = self._epoch_functions,
+        logger             = logger,
+      )
 
     accuracy_filter._restore()
-    test_data = mx.io.NDArrayIter(test_X, test_Y, batch_size=self._batch_size)
     test_accuracy= self._model.score(test_data)
     print 'test accuracy %f' % test_accuracy
 

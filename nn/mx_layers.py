@@ -203,8 +203,8 @@ class __NDReLUConvolution(object):
 def block_gradient(inputs):
   return mx.symbol.BlockGrad(data=inputs)
 
-def batch_normalization(inputs):
-  return mx.symbol.BatchNorm(data=inputs, fix_gamma=False)
+def batch_normalization(inputs, **kwargs):
+  return mx.symbol.BatchNorm(data=inputs, **kwargs)
 
 def broadcast(inputs, shape):
   return mx.sym.broadcast_to(inputs, shape)

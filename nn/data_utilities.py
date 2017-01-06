@@ -67,6 +67,7 @@ def load_cifar10_record(batch_size=None, path=None):
   g_mean = 116.779
   b_mean = 103.939
   mean = int(sum((r_mean, g_mean, b_mean)) / 3)
+  scale = 1 / 59.4415
 
   training_data = ImageRecordIter(
     batch_size         = batch_size,
@@ -83,6 +84,7 @@ def load_cifar10_record(batch_size=None, path=None):
     preprocess_threads = 16,
     rand_crop          = True,
     rand_mirror        = True,
+    scale              = scale,
     shuffle            = True,
     verbose            = False,
   )
@@ -99,6 +101,7 @@ def load_cifar10_record(batch_size=None, path=None):
     part_index         = 0,
     path_imgrec        = validation_record,
     preprocess_threads = 16,
+    scale              = scale,
     verbose            = False,
   )
   test_data = ImageRecordIter(
@@ -114,24 +117,15 @@ def load_cifar10_record(batch_size=None, path=None):
     part_index         = 1,
     path_imgrec        = validation_record,
     preprocess_threads = 16,
+    scale              = scale,
     verbose            = False,
   )
 
   return training_data, validation_data, test_data # TODO validation/test distinction
 
 if __name__ == '__main__':
-  BATCH_SIZE = 1000
-  T, V = load_cifar10_record(BATCH_SIZE)
-  t_size, v_size = 0, 0
-  while True:
-    try:
-      T.next()
-      t_size += BATCH_SIZE
-    except: break
-  print t_size
-  while True:
-    try:
-      V.next()
-      v_size += BATCH_SIZE
-    except: break
-  print v_size
+  import numpy as np
+  BATCH_SIZE = 5000
+  T, _, _ = load_cifar10_record(BATCH_SIZE)
+  X = T.next().data[0].asnumpy()
+  print np.std(X)

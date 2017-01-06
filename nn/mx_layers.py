@@ -269,9 +269,9 @@ def reshape(inputs, shape, **kwargs):
 def softmax_activation(X):
   return mx.symbol.SoftmaxActivation(data=X, mode='instance')
 
-def softmax_loss(inputs, labels=None):
-  return mx.symbol.SoftmaxOutput(data=inputs, label=labels) if labels \
-    else mx.symbol.SoftmaxOutput(data=inputs, name='softmax')
+def softmax_loss(inputs, labels=None, **kwargs):
+  return mx.symbol.SoftmaxOutput(data=inputs, label=labels, **kwargs) if labels \
+    else mx.symbol.SoftmaxOutput(data=inputs, name='softmax', **kwargs)
 
 def swap_axes(inputs, left, right):
   return mx.sym.SwapAxis(data=inputs, dim1=left, dim2=right)

@@ -1,6 +1,7 @@
-def load_mnist(path='/home/alex/experiment/mnist/utilities', shape=None):
-  import cPickle,gzip
+def load_mnist(path=None, shape=None):
+  import cPickle, gzip, os
   import minpy.numpy as np
+  if path is None: path = os.environ['MNISTPATH']
   with gzip.open(path+'/mnist.gz', 'rb') as data:
     package = cPickle.load(data)
   if shape is not None:
@@ -18,8 +19,9 @@ def load_mnist(path='/home/alex/experiment/mnist/utilities', shape=None):
 
 def load_cifar10(path=None, reshape=False, center=False, rescale=False, validation=4):
   import cPickle as pickle
+  import os
   import numpy as np
-  path = '/home/alex/experiment/cifar10/utilities/cifar/' if path is None else path
+  if path is None: path = os.environ['CIFAR10PATH']
   training_data, training_labels = [], []
   for i in range(5):
     if i != validation:
@@ -58,8 +60,9 @@ def load_cifar10(path=None, reshape=False, center=False, rescale=False, validati
     test_data, test_labels
 
 def load_cifar10_record(batch_size=None, path=None):
+  import os
   from mxnet.io import ImageRecordIter
-  path = '/home/alex/experiment/cifar10/utilities/cifar' if path is None else path
+  if path is None: path = os.environ['CIFAR10PATH']
   training_record = '%s/training-record' % path
   validation_record = '%s/validation-record' % path
 
@@ -124,8 +127,11 @@ def load_cifar10_record(batch_size=None, path=None):
   return training_data, validation_data, test_data # TODO validation/test distinction
 
 if __name__ == '__main__':
+  '''
   import numpy as np
   BATCH_SIZE = 5000
   T, _, _ = load_cifar10_record(BATCH_SIZE)
   X = T.next().data[0].asnumpy()
-  print np.std(X)
+  print np.mean(X), np.std(X)
+  '''
+  load_mnist()

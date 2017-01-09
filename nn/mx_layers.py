@@ -1,5 +1,8 @@
 import mxnet as mx
 
+def _map_args(args, mapping):
+  return {mapping.get(key, key) : value for key, value in args.items()}
+
 def ReLU(X):
   return mx.sym.Activation(data=X, act_type='relu')
 
@@ -234,15 +237,9 @@ def broadcast_multiply(left, right):
 def broadcast_divide(left, right):
   return mx.sym.broadcast_div(left, right)
 
-def convolution(inputs, kernel, filters, stride=(1, 1), pad=(0, 0), activation=None, **kwargs):
-  if activation:
-    return activate(
-      mx.symbol.Convolution(data=inputs, kernel=kernel, num_filter=filters, stride=stride, pad=pad),
-      activation,
-      **kwargs
-    )
-  else:
-    return mx.symbol.Convolution(data=inputs, kernel=kernel, num_filter=filters, stride=stride, pad=pad)
+def convolution(**kwargs):
+  mapping = {'cudnn_mode' : 'cudnn_tune', 'kernel_shape' : 'kernel', 'n_filters' : 'num_filter', 'X' : 'data'}
+  return mx.symbol.Convolution(**_map_args(kwargs, mapping))
 
 def dropout(inputs, ratio):
   return mx.symbol.Dropout(inputs, p=ratio)
@@ -259,9 +256,21 @@ def maximum(left, right):
 def minimum(left, right):
   return mx.sym.minimum(left, right)
  
-def pooling(inputs, mode, kernel, stride=(1, 1), pad=(0, 0)):
-  mapping = {'average' : 'avg', 'maximum' : 'max'}
-  return mx.symbol.Pooling(inputs, pool_type=mapping[mode], kernel=kernel, stride=stride, pad=pad)
+def pad(X, width, mode, value=0):
+  # temporary solution
+  D = len(width) / 2
+  for i in range(D):
+    if width[i * 2] + width[i * 2 + 1] > 0:
+      X = swap_axes(X, i, D - 1)
+      X = mx.symbol.Pad(data=X, pad_width=(0,) * 6 + width[i * 2 : i * 2 + 2], mode=mode, constant_value=value)
+      X = swap_axes(X, i, D - 1)
+  return X
+  
+def pooling(**kwargs):
+  mode_mapping = {'average' : 'avg', 'maximum' : 'max'}
+  kwargs['mode'] = mode_mapping[kwargs['mode']]
+  mapping = {'kernel_shape' : 'kernel', 'mode' : 'pool_type', 'X' : 'data'}
+  return mx.symbol.Pooling(**_map_args(kwargs, mapping))
 
 def reshape(inputs, shape, **kwargs):
   return mx.symbol.Reshape(data=inputs, target_shape=shape, **kwargs)

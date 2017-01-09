@@ -1,5 +1,13 @@
 import mxnet as mx
 
+class HybridInitializer:
+  def __init__(self, parameters, initializer):
+    self._parameters = parameters
+    self._initializer = initializer
+  def __call__(self, name, array):
+    try: array[:] = self._parameters[name]
+    except: self._initializer(name, array)
+
 class PReLUInitializer(mx.initializer.Xavier):
   def __init__(self):
     super(PReLUInitializer, self).__init__('gaussian', 'in', 2.0)

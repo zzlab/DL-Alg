@@ -109,16 +109,18 @@ class MXSolver():
 # TODO monitor
 # TODO logging: epoch/iteration
   def __init__(self,
-    batch_functions    = [],
-    batch_size         = None,
-    devices            = 'cpu',
-    epochs             = None,
-    epoch_functions    = [],
-    initializer        = None,
-    optimizer_settings = None,
-    symbol             = None,
-    setting_file       = None,
-    verbose            = False
+    auxiliary_states    = None,
+    batch_functions     = [],
+    batch_size          = None,
+    constant_parameters = None,
+    devices             = 'cpu',
+    epochs              = None,
+    epoch_functions     = [],
+    initializer         = None,
+    optimizer_settings  = None,
+    symbol              = None,
+    setting_file        = None,
+    verbose             = False
   ):
     self._batch_size = batch_size
     if devices is 'cpu': self._devices = mx.cpu()
@@ -147,6 +149,12 @@ class MXSolver():
       wd            = optimizer_settings.get('weight_decay', 0),
       **optimizer_settings.get('args', {})
     )
+    if constant_parameters is not None:
+      args = [arg for arg in symbol.list_arguments() if arg not in ('data', 'softmax_label')]
+      # TODO CPU mode
+      optimizer.idx2name = \
+        {index : arg for index, arg in enumerate(args)}
+      optimizer.set_lr_mult({key : 0 for key in constant_parameters}) # TODO eliminate gradient calculation
 
     logging.basicConfig(level=logging.NOTSET)
     logger = logging.getLogger()
@@ -154,6 +162,7 @@ class MXSolver():
     logger.addFilter(EpochFilter(self))
 
     self._model = mx.model.FeedForward(
+      aux_params       = auxiliary_states,
       ctx              = self._devices,
       initializer      = initializer,
       num_epoch        = self._epochs,

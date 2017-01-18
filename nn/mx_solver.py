@@ -154,7 +154,7 @@ class MXSolver():
       # TODO CPU mode
       optimizer.idx2name = \
         {index : arg for index, arg in enumerate(args)}
-      optimizer.set_lr_mult({key : 0 for key in constant_parameters}) # TODO eliminate gradient calculation
+      optimizer.set_lr_mult({key : 0.0 for key in constant_parameters}) # TODO eliminate gradient calculation
 
     logging.basicConfig(level=logging.NOTSET)
     logger = logging.getLogger()

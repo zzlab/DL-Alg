@@ -238,7 +238,14 @@ def broadcast_divide(left, right):
   return mx.sym.broadcast_div(left, right)
 
 def convolution(**kwargs):
-  mapping = {'cudnn_mode' : 'cudnn_tune', 'kernel_shape' : 'kernel', 'n_filters' : 'num_filter', 'X' : 'data'}
+  mapping = {
+    'attribute'    : 'attr',
+    'cudnn_mode'   : 'cudnn_tune',
+    'kernel_shape' : 'kernel',
+    'n_filters'    : 'num_filter',
+    'n_groups'     : 'num_group',
+    'X'            : 'data'
+  }
   return mx.symbol.Convolution(**_map_args(kwargs, mapping))
 
 def dropout(inputs, ratio):
@@ -247,8 +254,9 @@ def dropout(inputs, ratio):
 def flatten(inputs):
   return mx.symbol.Flatten(inputs)
 
-def fully_connected(inputs, n, **kwargs):
-  return mx.symbol.FullyConnected(data=inputs, num_hidden=n, **kwargs)
+def fully_connected(**kwargs):
+  mapping = {'attribute' : 'attr', 'n_hidden_units' : 'num_hidden', 'X' : 'data'}
+  return mx.symbol.FullyConnected(**_map_args(kwargs, mapping))
 
 def maximum(left, right):
   return mx.sym.maximum(left, right) 

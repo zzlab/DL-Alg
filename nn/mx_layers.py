@@ -237,6 +237,10 @@ def broadcast_multiply(left, right):
 def broadcast_divide(left, right):
   return mx.sym.broadcast_div(left, right)
 
+def concatenate(**kwargs):
+  mapping = {'axis' : 'dim', 'n_inputs' : 'num_args'}
+  return mx.symbol.Concat(*kwargs.pop('X'), **_map_args(kwargs, mapping))
+
 def convolution(**kwargs):
   mapping = {
     'attribute'    : 'attr',
@@ -280,8 +284,12 @@ def pooling(**kwargs):
   mapping = {'kernel_shape' : 'kernel', 'mode' : 'pool_type', 'X' : 'data'}
   return mx.symbol.Pooling(**_map_args(kwargs, mapping))
 
-def reshape(inputs, shape, **kwargs):
-  return mx.symbol.Reshape(data=inputs, target_shape=shape, **kwargs)
+def reshape(X, shape, **kwargs):
+  return mx.symbol.Reshape(data=X, shape=shape, **kwargs)
+
+def slice_channels(**kwargs):
+  mapping = {'X' : 'data', 'n_outputs' : 'num_outputs'}
+  return mx.symbol.SliceChannel(**_map_args(kwargs, mapping))
 
 def softmax_activation(X):
   return mx.symbol.SoftmaxActivation(data=X, mode='instance')

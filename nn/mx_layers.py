@@ -3,8 +3,8 @@ import mxnet as mx
 def _map_args(args, mapping):
   return {mapping.get(key, key) : value for key, value in args.items()}
 
-def ReLU(X):
-  return mx.sym.Activation(data=X, act_type='relu')
+def ReLU(X, **kwargs):
+  return mx.sym.Activation(data=X, act_type='relu', **kwargs)
 
 def activate(*args, **kwargs):
   return __activate()(*args, **kwargs)
@@ -255,8 +255,8 @@ def convolution(**kwargs):
 def dropout(inputs, ratio):
   return mx.symbol.Dropout(inputs, p=ratio)
 
-def flatten(inputs):
-  return mx.symbol.Flatten(inputs)
+def flatten(inputs, **kwargs):
+  return mx.symbol.Flatten(inputs, **kwargs)
 
 def fully_connected(**kwargs):
   mapping = {'attribute' : 'attr', 'n_hidden_units' : 'num_hidden', 'X' : 'data'}
@@ -287,6 +287,10 @@ def pooling(**kwargs):
 def reshape(X, shape, **kwargs):
   return mx.symbol.Reshape(data=X, shape=shape, **kwargs)
 
+def sign(X):
+  # -1 0 1
+  return mx.symbol.sign(X)
+
 def slice_channels(**kwargs):
   mapping = {'X' : 'data', 'n_outputs' : 'num_outputs'}
   return mx.symbol.SliceChannel(**_map_args(kwargs, mapping))
@@ -294,12 +298,15 @@ def slice_channels(**kwargs):
 def softmax_activation(X):
   return mx.symbol.SoftmaxActivation(data=X, mode='instance')
 
-def softmax_loss(inputs, labels=None, **kwargs):
-  return mx.symbol.SoftmaxOutput(data=inputs, label=labels, **kwargs) if labels \
-    else mx.symbol.SoftmaxOutput(data=inputs, name='softmax', **kwargs)
+def softmax_loss(*args, **kwargs):
+  mapping = {'prediction' : 'data', 'id' : 'name'}
+  return mx.symbol.SoftmaxOutput(**_map_args(kwargs, mapping))
 
 def swap_axes(inputs, left, right):
   return mx.sym.SwapAxis(data=inputs, dim1=left, dim2=right)
+
+def uniform(*args, **kwargs):
+  return mx.symbol.uniform(*args, **kwargs)
 
 def variable(label, **kwargs):
   return mx.symbol.Variable(label, **kwargs)

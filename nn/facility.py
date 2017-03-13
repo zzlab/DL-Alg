@@ -6,6 +6,13 @@ from minpy.array import Array
 import minpy.numpy as np
 from minpy.numpy import prod as product
 
+def count_parameters(parameters):
+  from operator import mul
+  n_parameters = 0
+  for key, value in parameters.items():
+    n_parameters += reduce(mul, value.shape)
+  return n_parameters
+    
 def batch_dot(left, right):
   # assert left.shape[0] == right.shape[0] and left.shape[2] == right.shape[1]
   left_symbol = symbol.Variable('left')
@@ -196,6 +203,4 @@ def affine_rescale(container, inputs, parameters, epsilon=1E-3):
   return inputs
 
 if __name__ == '__main__':
-  left = np0.random.normal(0, 1, (100, 1, 10))
-  right = np0.random.normal(0, 1, (100, 10, 10))
-  print batch_dot(left, right).shape
+  print count_parameters({'weight' : np0.ones((9, 9))})

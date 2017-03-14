@@ -209,8 +209,8 @@ def block_gradient(inputs):
 def batch_normalization(inputs, **kwargs):
   return mx.symbol.BatchNorm(data=inputs, **kwargs)
 
-def broadcast(inputs, shape):
-  return mx.sym.broadcast_to(inputs, shape)
+def broadcast(X, shape):
+  return mx.symbol.broadcast_to(X, shape=shape)
 
 def broadcast_axis(inputs, axis, size):
   return mx.sym.broadcast_axis(inputs, axis=axis, size=size)
@@ -264,6 +264,9 @@ def fully_connected(**kwargs):
 
 def maximum(left, right):
   return mx.sym.maximum(left, right) 
+
+def mean(*args, **kwargs):
+  return mx.symbol.mean(*args, **kwargs)
 
 def minimum(left, right):
   return mx.sym.minimum(left, right)

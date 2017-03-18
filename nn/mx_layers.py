@@ -252,6 +252,9 @@ def convolution(**kwargs):
   }
   return mx.symbol.Convolution(**_map_args(kwargs, mapping))
 
+def dot(left, right):
+  return mx.symbol.dot(left, right)
+
 def dropout(inputs, ratio):
   return mx.symbol.Dropout(inputs, p=ratio)
 
@@ -290,11 +293,14 @@ def pooling(**kwargs):
 def reshape(X, shape, **kwargs):
   return mx.symbol.Reshape(data=X, shape=shape, **kwargs)
 
+def sigmoid(X):
+  return mx.sym.Activation(data=X, act_type='sigmoid')
+
 def sign(X):
   # -1 0 1
   return mx.symbol.sign(X)
 
-def slice_channels(**kwargs):
+def slice(**kwargs):
   mapping = {'X' : 'data', 'n_outputs' : 'num_outputs'}
   return mx.symbol.SliceChannel(**_map_args(kwargs, mapping))
 
@@ -307,6 +313,9 @@ def softmax_loss(*args, **kwargs):
 
 def swap_axes(inputs, left, right):
   return mx.sym.SwapAxis(data=inputs, dim1=left, dim2=right)
+
+def tanh(X):
+  return mx.sym.Activation(data=X, act_type='tanh')
 
 def uniform(*args, **kwargs):
   return mx.symbol.uniform(*args, **kwargs)

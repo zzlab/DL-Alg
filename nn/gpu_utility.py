@@ -1,12 +1,4 @@
-'''
-GPU_availability returns [least_occupied_GPU, ..., most_occupied_GPU].
-Each element of the list is an GPU index (GPU index starts from 0).
-It is ensured that the current performance of each GPU in the list is at most P2.
-P0 is the maximum performance, indicating that one GPU is completely occupied.
-P12 is the minimum performance.
-'''
-
-def GPU_availability():
+def gpu_availability():
   import itertools
   import re
   from subprocess import Popen, PIPE
@@ -32,7 +24,7 @@ def GPU_availability():
     sorted(performance[key], cmp=lambda l,r: cmp(memory[l], memory[r]), reverse=True) \
     for key in reversed(sorted(performance.keys()))]))
 
-def GPU_memory(index):
+def gpu_memory(index):
   import re
   from subprocess import Popen, PIPE
   output = Popen(['nvidia-smi'], stdout=PIPE).communicate()[0]

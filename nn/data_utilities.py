@@ -1,23 +1,24 @@
-def load_mnist(path=None, shape=None):
-  # TODO simplify
+def load_mnist(path=None, scale=None, shape=None):
   import cPickle, gzip, os
-# import minpy.numpy as np
   import numpy as np
+
   if path is None: path = os.environ['MNISTPATH']
   with gzip.open(path+'/mnist.gz', 'rb') as data:
     package = cPickle.load(data)
-  if shape is not None:
-    package = list(package) 
-    for index, data in enumerate(package):
-      X, Y = data
-      N, D = X.shape
-      package[index] = (X.reshape((N,) + shape), Y)
-    package = tuple(package)
+
   unpacked = []
+
   for data in package:
-    unpacked.extend(data)
-  unpacked = tuple(unpacked)
-  return unpacked
+    X, Y = data
+    X = X.astype(np.float32)
+    if scale is not None:
+      X = X * scale / X.max()
+    if shape is not None:
+      N, D = X.shape
+      X = X.reshape((N,) + shape)
+    unpacked.extend((X, Y))
+
+  return tuple(unpacked)
 
 def load_cifar10(path=None, reshape=False, center=False, rescale=False, validation=4):
   import cPickle as pickle
@@ -128,12 +129,60 @@ def load_cifar10_record(batch_size=None, path=None):
 
   return training_data, validation_data, test_data # TODO validation/test distinction
 
+def load_imagenet_record(batch_size=None, path=None):
+  import os
+  from mxnet.io import ImageRecordIter
+  if path is None: path = os.environ['IMAGENETPATH']
+  training_record = '%s/training.record' % path
+  validation_record = '%s/validation.record' % path
+
+  r_mean = 123.680
+  g_mean = 116.779
+  b_mean = 103.939
+  mean = int((r_mean + g_mean + b_mean) / 3)
+  scale = 1 / 59.4415
+
+  training_data = ImageRecordIter(
+    batch_size         = batch_size,
+    data_name          = 'data',
+    data_shape         = (3, 224, 224),
+    fill_value         = mean,
+    label_name         = 'softmax_label',
+    label_width        = 1,
+    mean_r             = r_mean,
+    mean_g             = g_mean,
+    mean_b             = b_mean,
+    pad                = 4,
+    path_imgrec        = training_record,
+    preprocess_threads = 16,
+    rand_crop          = True,
+    rand_mirror        = True,
+    scale              = scale,
+    shuffle            = True,
+    verbose            = False,
+  )
+
+  validation_data = ImageRecordIter(
+    batch_size         = batch_size,
+    data_name          = 'data',
+    data_shape         = (3, 224, 224),
+    fill_value         = mean,
+    label_name         = 'softmax_label',
+    label_width        = 1,
+    mean_r             = r_mean,
+    mean_g             = g_mean,
+    mean_b             = b_mean,
+    pad                = 4,
+    path_imgrec        = validation_record,
+    preprocess_threads = 16,
+    rand_crop          = True,
+    rand_mirror        = True,
+    scale              = scale,
+    shuffle            = True,
+    verbose            = False,
+  )
+
+  return training_data, validation_data
+
 if __name__ == '__main__':
-  '''
-  import numpy as np
-  BATCH_SIZE = 5000
-  T, _, _ = load_cifar10_record(BATCH_SIZE)
-  X = T.next().data[0].asnumpy()
-  print np.mean(X), np.std(X)
-  '''
-  load_mnist()
+  training, validation = load_imagenet_record(batch_size=1)

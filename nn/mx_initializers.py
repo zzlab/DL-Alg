@@ -1,12 +1,14 @@
 import mxnet as mx
 
-class HybridInitializer:
+class HybridInitializer(mx.initializer.Initializer):
   def __init__(self, parameters, initializer):
     self._parameters = parameters
     self._initializer = initializer
-  def __call__(self, name, array):
-    try: array[:] = self._parameters[name]
-    except: self._initializer(name, array)
+
+  def __call__(self, id, array):
+    if id in self._parameters:
+      array[:] = self._parameters[id]
+    else: self._initializer(id, array)
 
 class PReLUInitializer(mx.initializer.Xavier):
   def __init__(self):

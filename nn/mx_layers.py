@@ -203,11 +203,14 @@ class __NDReLUConvolution(object):
 
     return outputs
   
-def block_gradient(inputs):
-  return mx.symbol.BlockGrad(data=inputs)
+def terminate_gradient(X):
+  return mx.symbol.BlockGrad(data=X)
 
-def batch_normalization(inputs, **kwargs):
-  return mx.symbol.BatchNorm(data=inputs, **kwargs)
+def batch_normalization(X, **kwargs):
+  mapping = {
+    'id'           : 'name',
+  }
+  return mx.symbol.BatchNorm(data=X, **_map_args(kwargs, mapping))
 
 def broadcast(X, shape):
   return mx.symbol.broadcast_to(X, shape=shape)
@@ -245,6 +248,7 @@ def convolution(**kwargs):
   mapping = {
     'attribute'    : 'attr',
     'cudnn_mode'   : 'cudnn_tune',
+    'id'           : 'name',
     'kernel_shape' : 'kernel',
     'n_filters'    : 'num_filter',
     'n_groups'     : 'num_group',
@@ -255,15 +259,22 @@ def convolution(**kwargs):
 def dot(left, right):
   return mx.symbol.dot(left, right)
 
-def dropout(inputs, ratio):
-  return mx.symbol.Dropout(inputs, p=ratio)
+def dropout(X, p):
+  return mx.symbol.Dropout(X, p=p)
 
 def flatten(inputs, **kwargs):
   return mx.symbol.Flatten(inputs, **kwargs)
 
 def fully_connected(**kwargs):
-  mapping = {'attribute' : 'attr', 'n_hidden_units' : 'num_hidden', 'X' : 'data'}
+  mapping = {'attribute' : 'attr', 'id' : 'name', 'n_hidden_units' : 'num_hidden', 'X' : 'data'}
   return mx.symbol.FullyConnected(**_map_args(kwargs, mapping))
+
+def group(symbols):
+  return mx.symbol.Group(symbols)
+
+def linear_regression_loss(*args, **kwargs):
+  mapping = {'id' : 'name'}
+  return mx.symbol.LinearRegressionOutput(*args, **_map_args(kwargs, mapping))
 
 def maximum(left, right):
   return mx.sym.maximum(left, right) 
@@ -274,6 +285,9 @@ def mean(*args, **kwargs):
 def minimum(left, right):
   return mx.sym.minimum(left, right)
  
+def norm(array):
+  return mx.symbol.norm(array)
+
 def pad(X, width, mode, value=0):
   # temporary solution
   D = len(width) / 2
@@ -304,12 +318,15 @@ def slice(**kwargs):
   mapping = {'X' : 'data', 'n_outputs' : 'num_outputs'}
   return mx.symbol.SliceChannel(**_map_args(kwargs, mapping))
 
-def softmax_activation(X):
+def softmax(X):
   return mx.symbol.SoftmaxActivation(data=X, mode='instance')
 
 def softmax_loss(*args, **kwargs):
   mapping = {'prediction' : 'data', 'id' : 'name'}
   return mx.symbol.SoftmaxOutput(**_map_args(kwargs, mapping))
+
+def sum(*args, **kwargs):
+  return mx.symbol.sum(*args, **kwargs)
 
 def swap_axes(inputs, left, right):
   return mx.sym.SwapAxis(data=inputs, dim1=left, dim2=right)

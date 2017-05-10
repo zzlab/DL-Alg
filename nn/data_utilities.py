@@ -1,10 +1,13 @@
 def load_mnist(path=None, scale=None, shape=None):
-  import cPickle, gzip, os
+  import cPickle, gzip, joblib, os
   import numpy as np
 
   if path is None: path = os.environ['MNISTPATH']
-  with gzip.open(path+'/mnist.gz', 'rb') as data:
+  package = joblib.load(path + '/mnist')
+  '''
+  with gzip.open(path + '/mnist.gz', 'rb') as data:
     package = cPickle.load(data)
+  '''
 
   unpacked = []
 
